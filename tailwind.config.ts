@@ -11,6 +11,7 @@ export default {
   theme: {
     extend: {
       colors: {
+        // shadcn/ui colors (CSS variables)
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         card: {
@@ -51,11 +52,41 @@ export default {
           "4": "hsl(var(--chart-4))",
           "5": "hsl(var(--chart-5))",
         },
+        // Semantic colors (UX Specification)
+        success: "#22C55E",
+        warning: "#F59E0B",
+        error: "#EF4444",
+        info: "#0EA5E9",
+        // Brand colors
+        brand: {
+          primary: "#2563EB",
+          "primary-dark": "#1D4ED8",
+          "primary-light": "#DBEAFE",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+      },
+      // Design System Tokens (UX Specification)
+      fontFamily: {
+        khmer: ["Kantumruy Pro", "Battambang", "system-ui", "sans-serif"],
+        sans: ["Inter", "system-ui", "sans-serif"],
+      },
+      spacing: {
+        "touch-target": "44px",
+        "nav-height": "56px",
+        "header-height": "56px",
+      },
+      fontSize: {
+        "body-khmer": ["18px", { lineHeight: "1.8" }],
+      },
+      minHeight: {
+        "touch-target": "44px",
+      },
+      minWidth: {
+        "touch-target": "44px",
       },
     },
   },
