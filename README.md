@@ -98,6 +98,31 @@ If you wish to just develop locally and not deploy to Vercel, [follow the steps 
 
 > Check out [the docs for Local Development](https://supabase.com/docs/guides/getting-started/local-development) to also run Supabase locally.
 
+## Supabase Email Template Configuration
+
+For email verification to work correctly with the PKCE authentication flow, you need to configure the email templates in Supabase Dashboard:
+
+### Required Setup
+
+1. **Email Templates** (Authentication > Email Templates):
+   - Edit the "Confirm signup" template
+   - Change the URL from `{{ .ConfirmationURL }}` to:
+     ```
+     {{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email
+     ```
+
+2. **URL Configuration** (Authentication > URL Configuration):
+   - Site URL: Set to your deployment URL (e.g., `https://your-app.vercel.app`)
+   - Redirect URLs: Add `http://localhost:3000/**` for development
+
+3. **Email Auth** (Authentication > Providers):
+   - Ensure Email provider is enabled
+   - "Confirm email" option should be enabled (default)
+
+### Why This Matters
+
+The `@supabase/ssr` package uses the PKCE (Proof Key for Code Exchange) flow by default. This requires confirmation links to use `token_hash` instead of the direct confirmation URL to properly exchange tokens and set cookies.
+
 ## Feedback and issues
 
 Please file feedback and issues over on the [Supabase GitHub org](https://github.com/supabase/supabase/issues/new/choose).
