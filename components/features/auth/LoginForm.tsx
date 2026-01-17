@@ -37,7 +37,7 @@ export function LoginForm() {
   const onSubmit = (data: LoginInput) => {
     setServerError(null);
     const formData = new FormData();
-    formData.append("email", data.email);
+    formData.append("email", data.email.trim());
     formData.append("password", data.password);
 
     startTransition(async () => {
