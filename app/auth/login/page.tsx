@@ -1,4 +1,4 @@
-import { LoginForm } from "@/components/login-form";
+import { LoginForm } from "@/components/features/auth/LoginForm";
 import { Suspense } from "react";
 
 async function SuccessMessage({
@@ -26,11 +26,13 @@ export default function LoginPage({
 }) {
   return (
     <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
-      <div className="w-full max-w-sm">
+      <div className="w-full max-w-md">
         <Suspense fallback={null}>
           <SuccessMessage searchParams={searchParams} />
         </Suspense>
-        <LoginForm />
+        <Suspense fallback={<div className="h-96 animate-pulse bg-muted rounded-lg" />}>
+          <LoginForm />
+        </Suspense>
       </div>
     </div>
   );

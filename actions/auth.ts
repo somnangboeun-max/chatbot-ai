@@ -1,7 +1,8 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { signupSchema, emailSchema } from "@/lib/validations/auth";
+import { signupSchema, emailSchema, loginSchema } from "@/lib/validations/auth";
+import { redirect } from "next/navigation";
 import type { ActionResult } from "@/types";
 
 export async function signUp(
@@ -133,4 +134,105 @@ export async function resendVerificationEmail(
     success: true,
     data: { message: "Verification email sent. Please check your inbox." },
   };
+}
+
+export async function signIn(
+  formData: FormData
+): Promise<ActionResult<{ message: string }>> {
+  const validated = loginSchema.safeParse({
+    email: formData.get("email"),
+    password: formData.get("password"),
+  });
+
+  if (!validated.success) {
+    return {
+      success: false,
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "Invalid input",
+        details: validated.error.flatten().fieldErrors as Record<
+          string,
+          string[]
+        >,
+      },
+    };
+  }
+
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: validated.data.email,
+    password: validated.data.password,
+  });
+
+  if (error) {
+    console.error("[ERROR] [AUTH] Login failed:", {
+      email: validated.data.email,
+      error: error.message,
+      code: error.code,
+    });
+
+    // Security: Don't reveal whether email exists
+    if (error.message.includes("Invalid login credentials")) {
+      return {
+        success: false,
+        error: {
+          code: "UNAUTHORIZED",
+          message: "Invalid email or password",
+        },
+      };
+    }
+
+    if (error.message.includes("Email not confirmed")) {
+      return {
+        success: false,
+        error: {
+          code: "FORBIDDEN",
+          message: "Please verify your email before logging in",
+        },
+      };
+    }
+
+    return {
+      success: false,
+      error: {
+        code: "SERVER_ERROR",
+        message: "Unable to sign in. Please try again.",
+      },
+    };
+  }
+
+  console.info("[INFO] [AUTH] User logged in:", {
+    email: validated.data.email,
+    userId: data.user?.id,
+  });
+
+  return {
+    success: true,
+    data: { message: "Login successful" },
+  };
+}
+
+export async function signOut(): Promise<ActionResult<{ message: string }>> {
+  const supabase = await createClient();
+
+  const { error } = await supabase.auth.signOut();
+
+  if (error) {
+    console.error("[ERROR] [AUTH] Sign out failed:", {
+      error: error.message,
+    });
+
+    return {
+      success: false,
+      error: {
+        code: "SERVER_ERROR",
+        message: "Unable to sign out. Please try again.",
+      },
+    };
+  }
+
+  console.info("[INFO] [AUTH] User signed out");
+
+  redirect("/auth/login");
 }

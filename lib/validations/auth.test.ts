@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { signupSchema, emailSchema } from "./auth";
+import { signupSchema, emailSchema, loginSchema } from "./auth";
 
 describe("emailSchema", () => {
   it("accepts valid email", () => {
@@ -69,5 +69,55 @@ describe("signupSchema", () => {
       password: "12345678",
     });
     expect(result.success).toBe(true);
+  });
+});
+
+describe("loginSchema", () => {
+  it("accepts valid login data", () => {
+    const result = loginSchema.safeParse({
+      email: "test@example.com",
+      password: "anypassword",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts login with any password length (no minimum)", () => {
+    const result = loginSchema.safeParse({
+      email: "test@example.com",
+      password: "1",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects empty password", () => {
+    const result = loginSchema.safeParse({
+      email: "test@example.com",
+      password: "",
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const message = result.error.issues?.[0]?.message;
+      expect(message).toBe("Password is required");
+    }
+  });
+
+  it("rejects invalid email in login", () => {
+    const result = loginSchema.safeParse({
+      email: "invalid",
+      password: "password123",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects empty email", () => {
+    const result = loginSchema.safeParse({
+      email: "",
+      password: "password123",
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const message = result.error.issues?.[0]?.message;
+      expect(message).toBe("Email is required");
+    }
   });
 });

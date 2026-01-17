@@ -38,25 +38,44 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  // Do not run code between createServerClient and
-  // supabase.auth.getClaims(). A simple mistake could make it very hard to debug
-  // issues with users being randomly logged out.
+  // IMPORTANT: Avoid writing any logic between createServerClient and
+  // supabase.auth.getUser(). A simple mistake could make your app very slow.
 
-  // IMPORTANT: If you remove getClaims() and you use server-side rendering
-  // with the Supabase client, your users may be randomly logged out.
-  const { data } = await supabase.auth.getClaims();
-  const user = data?.claims;
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (
-    request.nextUrl.pathname !== "/" &&
-    !user &&
-    !request.nextUrl.pathname.startsWith("/login") &&
-    !request.nextUrl.pathname.startsWith("/auth")
-  ) {
-    // no user, potentially respond by redirecting the user to the login page
-    const url = request.nextUrl.clone();
-    url.pathname = "/auth/login";
-    return NextResponse.redirect(url);
+  // Protected routes check - these routes require authentication
+  const isProtectedRoute =
+    request.nextUrl.pathname.startsWith("/protected") ||
+    request.nextUrl.pathname.startsWith("/dashboard") ||
+    request.nextUrl.pathname.startsWith("/onboarding") ||
+    request.nextUrl.pathname.startsWith("/messages") ||
+    request.nextUrl.pathname.startsWith("/settings");
+
+  if (isProtectedRoute && !user) {
+    // Preserve the original URL for post-login redirect (including query params)
+    const redirectUrl = new URL("/auth/login", request.url);
+    const originalPath = request.nextUrl.pathname + request.nextUrl.search;
+    redirectUrl.searchParams.set("redirectTo", originalPath);
+
+    // Check if this might be a session expiry (user had cookies but they're invalid)
+    const hasAuthCookie = request.cookies
+      .getAll()
+      .some((c) => c.name.includes("auth-token") || c.name.includes("sb-"));
+    if (hasAuthCookie) {
+      redirectUrl.searchParams.set("message", "Your session has expired. Please sign in again.");
+    }
+
+    return NextResponse.redirect(redirectUrl);
+  }
+
+  // Redirect authenticated users away from auth pages (except confirm)
+  const isAuthRoute = request.nextUrl.pathname.startsWith("/auth");
+  const isConfirmRoute = request.nextUrl.pathname.includes("/confirm");
+
+  if (isAuthRoute && user && !isConfirmRoute) {
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is.
