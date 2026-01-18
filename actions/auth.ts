@@ -1,7 +1,13 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { signupSchema, emailSchema, loginSchema } from "@/lib/validations/auth";
+import {
+  signupSchema,
+  emailSchema,
+  loginSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+} from "@/lib/validations/auth";
 import { redirect } from "next/navigation";
 import type { ActionResult } from "@/types";
 
@@ -235,4 +241,126 @@ export async function signOut(): Promise<ActionResult<{ message: string }>> {
   console.info("[INFO] [AUTH] User signed out");
 
   redirect("/auth/login");
+}
+
+export async function requestPasswordReset(
+  formData: FormData
+): Promise<ActionResult<{ message: string }>> {
+  const validated = forgotPasswordSchema.safeParse({
+    email: formData.get("email"),
+  });
+
+  if (!validated.success) {
+    return {
+      success: false,
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "Invalid input",
+        details: validated.error.flatten().fieldErrors as Record<
+          string,
+          string[]
+        >,
+      },
+    };
+  }
+
+  const supabase = await createClient();
+
+  const { error } = await supabase.auth.resetPasswordForEmail(
+    validated.data.email,
+    {
+      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/confirm?type=recovery`,
+    }
+  );
+
+  // SECURITY: Always return success message even if email doesn't exist
+  // This prevents email enumeration attacks
+  if (error) {
+    // Note: Don't log email addresses to prevent PII in logs
+    console.error("[ERROR] [AUTH] Password reset request failed:", {
+      error: error.message,
+    });
+    // Still return success to prevent email enumeration
+  }
+
+  // Log without PII - just indicate a request was made
+  console.info("[INFO] [AUTH] Password reset requested");
+
+  return {
+    success: true,
+    data: { message: "Check your email for reset instructions" },
+  };
+}
+
+export async function updatePassword(
+  formData: FormData
+): Promise<ActionResult<{ message: string }>> {
+  const validated = resetPasswordSchema.safeParse({
+    password: formData.get("password"),
+    confirmPassword: formData.get("confirmPassword"),
+  });
+
+  if (!validated.success) {
+    return {
+      success: false,
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "Invalid input",
+        details: validated.error.flatten().fieldErrors as Record<
+          string,
+          string[]
+        >,
+      },
+    };
+  }
+
+  const supabase = await createClient();
+
+  // Check if user is authenticated (from recovery flow)
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    console.error("[ERROR] [AUTH] Password update - no authenticated user");
+    return {
+      success: false,
+      error: {
+        code: "UNAUTHORIZED",
+        message: "Your reset link has expired. Please request a new one.",
+      },
+    };
+  }
+
+  const { error } = await supabase.auth.updateUser({
+    password: validated.data.password,
+  });
+
+  if (error) {
+    console.error("[ERROR] [AUTH] Password update failed:", {
+      userId: user.id,
+      error: error.message,
+    });
+    return {
+      success: false,
+      error: {
+        code: "SERVER_ERROR",
+        message: "Unable to update password. Please try again.",
+      },
+    };
+  }
+
+  // Sign out ALL sessions after password update (security best practice)
+  // Using 'global' scope ensures all devices/sessions are invalidated
+  await supabase.auth.signOut({ scope: 'global' });
+
+  console.info("[INFO] [AUTH] Password updated successfully:", {
+    userId: user.id,
+  });
+
+  return {
+    success: true,
+    data: { message: "Password updated successfully" },
+  };
 }

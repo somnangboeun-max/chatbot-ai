@@ -1,6 +1,13 @@
 import { z } from "zod";
 
 const envSchema = z.object({
+  // Site URL (required for auth email redirects in production)
+  // Defaults to localhost:3000 for development
+  NEXT_PUBLIC_SITE_URL: z
+    .string()
+    .url("NEXT_PUBLIC_SITE_URL must be a valid URL")
+    .default("http://localhost:3000"),
+
   // Supabase (required)
   NEXT_PUBLIC_SUPABASE_URL: z.string().url("NEXT_PUBLIC_SUPABASE_URL must be a valid URL"),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1, "NEXT_PUBLIC_SUPABASE_ANON_KEY is required"),
