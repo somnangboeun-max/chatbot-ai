@@ -12,7 +12,8 @@ const envSchema = z.object({
   NEXT_PUBLIC_SUPABASE_URL: z.string().url("NEXT_PUBLIC_SUPABASE_URL must be a valid URL"),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1, "NEXT_PUBLIC_SUPABASE_ANON_KEY is required"),
 
-  // Supabase Admin (optional for Story 1.1, required for webhooks in Story 4.x)
+  // Supabase Admin (required at runtime for Story 1.5+ - multi-tenant business creation)
+  // Optional at build time to allow static generation to complete
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
 
   // Facebook Messenger (optional for Story 1.1, required for Story 4.x)

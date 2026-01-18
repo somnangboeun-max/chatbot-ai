@@ -6,7 +6,8 @@
     "start": "next start",
     "lint": "eslint .",
     "test": "vitest",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "db:types": "supabase gen types typescript --local > types/database.types.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

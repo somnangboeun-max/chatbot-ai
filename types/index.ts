@@ -23,3 +23,17 @@ export type ActionResult<T> =
         details?: Record<string, string[]>;
       };
     };
+
+// Re-export database types
+// Note: database.types.ts should be regenerated with `npm run db:types`
+// after applying migrations to Supabase
+export type {
+  Database,
+  Business,
+  BusinessInsert,
+  BusinessUpdate,
+  Tables,
+  TablesInsert,
+  TablesUpdate,
+  Json,
+} from "./database.types";

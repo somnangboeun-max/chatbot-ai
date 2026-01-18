@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
   signupSchema,
   emailSchema,
@@ -10,6 +11,7 @@ import {
 } from "@/lib/validations/auth";
 import { redirect } from "next/navigation";
 import type { ActionResult } from "@/types";
+import { env } from "@/lib/env";
 
 export async function signUp(
   formData: FormData
@@ -35,19 +37,23 @@ export async function signUp(
 
   const supabase = await createClient();
 
-  const { data, error } = await supabase.auth.signUp({
+  // 1. Create user in Supabase Auth
+  const { data: authData, error: authError } = await supabase.auth.signUp({
     email: validated.data.email,
     password: validated.data.password,
+    options: {
+      emailRedirectTo: `${env.NEXT_PUBLIC_SITE_URL}/auth/confirm`,
+    },
   });
 
-  if (error) {
+  if (authError) {
     console.error("[ERROR] [AUTH] Signup failed:", {
       email: validated.data.email,
-      error: error.message,
+      error: authError.message,
     });
 
     // Handle specific errors
-    if (error.message.includes("already registered")) {
+    if (authError.message.includes("already registered")) {
       return {
         success: false,
         error: {
@@ -57,7 +63,7 @@ export async function signUp(
       };
     }
 
-    if (error.message.includes("rate limit")) {
+    if (authError.message.includes("rate limit")) {
       return {
         success: false,
         error: {
@@ -76,10 +82,63 @@ export async function signUp(
     };
   }
 
-  console.info("[INFO] [AUTH] User signup initiated:", {
-    email: validated.data.email,
-    userId: data.user?.id,
-  });
+  if (!authData.user) {
+    return {
+      success: false,
+      error: {
+        code: "SERVER_ERROR",
+        message: "User creation failed unexpectedly.",
+      },
+    };
+  }
+
+  // 2. Create business record for the new user
+  // Use admin client to bypass RLS for initial creation (user has no tenant_id yet)
+  const adminSupabase = createAdminClient();
+
+  // Use email prefix as initial business name, or default
+  const businessName = validated.data.email.split("@")[0] || "My Business";
+
+  const { data: business, error: businessError } = await adminSupabase
+    .from("businesses")
+    .insert({
+      owner_id: authData.user.id,
+      name: businessName,
+    })
+    .select()
+    .single();
+
+  if (businessError) {
+    console.error("[ERROR] [AUTH] Business creation failed:", {
+      userId: authData.user.id,
+      error: businessError.message,
+    });
+    // Note: User is created but business failed - this is a partial failure
+    // The user can still verify email, and we'll handle missing business in callback
+  }
+
+  // 3. Set tenant_id in user's app_metadata (JWT claim)
+  if (business) {
+    const { error: claimError } = await adminSupabase.auth.admin.updateUserById(
+      authData.user.id,
+      {
+        app_metadata: { tenant_id: business.id },
+      }
+    );
+
+    if (claimError) {
+      console.error("[ERROR] [AUTH] Failed to set tenant_id claim:", {
+        userId: authData.user.id,
+        businessId: business.id,
+        error: claimError.message,
+      });
+    } else {
+      console.info("[INFO] [AUTH] User and business created:", {
+        userId: authData.user.id,
+        businessId: business.id,
+      });
+    }
+  }
 
   return {
     success: true,

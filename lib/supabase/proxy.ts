@@ -53,6 +53,12 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/messages") ||
     request.nextUrl.pathname.startsWith("/settings");
 
+  // Routes that require tenant_id (after business setup)
+  const requiresTenantId =
+    request.nextUrl.pathname.startsWith("/dashboard") ||
+    request.nextUrl.pathname.startsWith("/messages") ||
+    request.nextUrl.pathname.startsWith("/settings");
+
   if (isProtectedRoute && !user) {
     // Preserve the original URL for post-login redirect (including query params)
     const redirectUrl = new URL("/auth/login", request.url);
@@ -70,12 +76,32 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  // Redirect authenticated users away from auth pages (except confirm)
+  // Check for tenant_id on routes that require it
+  if (requiresTenantId && user) {
+    const tenantId = user.app_metadata?.tenant_id;
+
+    if (!tenantId) {
+      // User exists but no business - redirect to setup
+      console.warn("[WARN] [MIDDLEWARE] User has no tenant_id:", { userId: user.id });
+      return NextResponse.redirect(new URL("/auth/setup-business", request.url));
+    }
+  }
+
+  // Redirect authenticated users away from auth pages (except confirm and setup-business)
   const isAuthRoute = request.nextUrl.pathname.startsWith("/auth");
   const isConfirmRoute = request.nextUrl.pathname.includes("/confirm");
+  const isSetupBusinessRoute = request.nextUrl.pathname.includes("/setup-business");
 
-  if (isAuthRoute && user && !isConfirmRoute) {
-    return NextResponse.redirect(new URL("/", request.url));
+  if (isAuthRoute && user && !isConfirmRoute && !isSetupBusinessRoute) {
+    // Check if user has tenant_id and onboarding status to determine where to redirect
+    const tenantId = user.app_metadata?.tenant_id;
+    if (tenantId) {
+      // User has a business, redirect to dashboard or onboarding based on status
+      // Note: We redirect to root and let the page handle the logic
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+    // No tenant_id - let them access setup-business
+    return NextResponse.redirect(new URL("/auth/setup-business", request.url));
   }
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is.

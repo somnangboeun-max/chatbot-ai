@@ -3,6 +3,18 @@ import { type EmailOtpType } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
 import { type NextRequest } from "next/server";
 
+/**
+ * Auth callback handler for email verification and password recovery
+ *
+ * After email verification, checks:
+ * 1. If user has tenant_id claim (business exists)
+ * 2. If business has completed onboarding
+ *
+ * Redirects to:
+ * - /onboarding if business exists but onboarding incomplete
+ * - /dashboard if business exists and onboarding complete
+ * - /auth/setup-business if no business exists (edge case)
+ */
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const token_hash = searchParams.get("token_hash");
@@ -27,7 +39,47 @@ export async function GET(request: NextRequest) {
         }
 
         console.info("[INFO] [AUTH] Email verified successfully");
-        // For email confirmation, redirect to login with success message
+
+        // Get the current user to check tenant_id
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (user) {
+          const tenantId = user.app_metadata?.tenant_id;
+
+          if (tenantId) {
+            // User has a business, check onboarding status
+            const { data: business } = await supabase
+              .from("businesses")
+              .select("onboarding_completed")
+              .eq("id", tenantId)
+              .single();
+
+            if (business?.onboarding_completed) {
+              console.info("[INFO] [AUTH] User verified, redirecting to dashboard:", {
+                userId: user.id,
+                tenantId,
+              });
+              redirect("/dashboard");
+            } else {
+              console.info("[INFO] [AUTH] User verified, redirecting to onboarding:", {
+                userId: user.id,
+                tenantId,
+              });
+              // Onboarding not complete - redirect to onboarding
+              redirect("/onboarding");
+            }
+          } else {
+            // No tenant_id - edge case where business creation failed
+            console.warn("[WARN] [AUTH] User verified but no tenant_id:", {
+              userId: user.id,
+            });
+            redirect("/auth/setup-business");
+          }
+        }
+
+        // Fallback: redirect to login with success message
         const successMessage = "Email verified! You can now log in.";
         let redirectUrl: string;
         if (next) {
