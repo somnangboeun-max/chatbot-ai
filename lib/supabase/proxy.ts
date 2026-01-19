@@ -85,6 +85,40 @@ export async function updateSession(request: NextRequest) {
       console.warn("[WARN] [MIDDLEWARE] User has no tenant_id:", { userId: user.id });
       return NextResponse.redirect(new URL("/auth/setup-business", request.url));
     }
+
+    // Check onboarding status for dashboard routes
+    const isDashboardRoute = request.nextUrl.pathname.startsWith("/dashboard");
+    if (isDashboardRoute) {
+      // Fetch business to check onboarding status
+      const { data: business } = await supabase
+        .from("businesses")
+        .select("onboarding_completed")
+        .eq("id", tenantId)
+        .single();
+
+      if (business && !business.onboarding_completed) {
+        // User hasn't completed onboarding - redirect to onboarding wizard
+        return NextResponse.redirect(new URL("/onboarding", request.url));
+      }
+    }
+  }
+
+  // Check if user is on onboarding but has already completed it
+  const isOnboardingRoute = request.nextUrl.pathname.startsWith("/onboarding");
+  if (isOnboardingRoute && user) {
+    const tenantId = user.app_metadata?.tenant_id;
+    if (tenantId) {
+      const { data: business } = await supabase
+        .from("businesses")
+        .select("onboarding_completed")
+        .eq("id", tenantId)
+        .single();
+
+      if (business?.onboarding_completed) {
+        // User has completed onboarding - redirect to dashboard
+        return NextResponse.redirect(new URL("/dashboard", request.url));
+      }
+    }
   }
 
   // Redirect authenticated users away from auth pages (except confirm and setup-business)
