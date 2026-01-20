@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import {
   Card,
@@ -7,7 +8,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { SignOutButton } from "@/components/features/auth/SignOutButton";
+import { Settings } from "lucide-react";
 import { Suspense } from "react";
 
 /**
@@ -53,7 +56,15 @@ async function DashboardContent() {
               Welcome back, {business?.name || "Business Owner"}
             </p>
           </div>
-          <SignOutButton />
+          <div className="flex items-center gap-2">
+            <Link href="/settings">
+              <Button variant="outline" size="icon">
+                <Settings className="h-4 w-4" />
+                <span className="sr-only">Settings</span>
+              </Button>
+            </Link>
+            <SignOutButton />
+          </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
