@@ -148,3 +148,44 @@ export const DAYS_OF_WEEK = [
 ] as const;
 
 export type DayOfWeek = (typeof DAYS_OF_WEEK)[number];
+
+// Step 5: Products & Prices
+// Single product validation
+export const productSchema = z.object({
+  id: z.string().uuid().optional(), // Optional for new products
+  name: z
+    .string()
+    .min(1, "Product name is required")
+    .max(100, "Product name must be 100 characters or less")
+    .trim(),
+  price: z
+    .number()
+    .positive("Price must be greater than 0")
+    .multipleOf(0.01, "Price can have at most 2 decimal places"),
+  currency: z.enum(["USD", "KHR"], {
+    message: "Please select USD or KHR",
+  }),
+});
+
+// Products array validation (minimum 1 product required)
+export const productsArraySchema = z.object({
+  products: z.array(productSchema).min(1, "Please add at least one product"),
+});
+
+export type ProductInput = z.infer<typeof productSchema>;
+export type ProductsInput = z.infer<typeof productsArraySchema>;
+
+// Currency display helper
+export type Currency = "USD" | "KHR";
+
+/**
+ * Format price for display
+ * USD: $5.00
+ * KHR: 20,000៛
+ */
+export function formatPrice(price: number, currency: Currency): string {
+  if (currency === "USD") {
+    return `$${price.toFixed(2)}`;
+  }
+  return `${price.toLocaleString()}៛`;
+}

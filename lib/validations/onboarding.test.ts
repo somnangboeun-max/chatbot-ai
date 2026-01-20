@@ -7,6 +7,9 @@ import {
   formatTime12Hour,
   defaultBusinessHours,
   DAYS_OF_WEEK,
+  productSchema,
+  productsArraySchema,
+  formatPrice,
 } from "./onboarding";
 
 describe("Onboarding Validation Schemas", () => {
@@ -266,6 +269,184 @@ describe("Onboarding Validation Schemas", () => {
 
     it("ends with sunday", () => {
       expect(DAYS_OF_WEEK[6]).toBe("sunday");
+    });
+  });
+
+  describe("productSchema", () => {
+    it("accepts valid product data", () => {
+      const result = productSchema.safeParse({
+        name: "Lok Lak",
+        price: 5.0,
+        currency: "USD",
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it("accepts Khmer product names", () => {
+      const result = productSchema.safeParse({
+        name: "បាយឆា",
+        price: 4.5,
+        currency: "USD",
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it("accepts products with KHR currency", () => {
+      const result = productSchema.safeParse({
+        name: "Coffee",
+        price: 5000,
+        currency: "KHR",
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it("accepts products with optional id", () => {
+      const result = productSchema.safeParse({
+        id: "550e8400-e29b-41d4-a716-446655440000",
+        name: "Fried Rice",
+        price: 3.5,
+        currency: "USD",
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it("rejects empty product name", () => {
+      const result = productSchema.safeParse({
+        name: "",
+        price: 5.0,
+        currency: "USD",
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe("Product name is required");
+      }
+    });
+
+    it("rejects product name over 100 characters", () => {
+      const result = productSchema.safeParse({
+        name: "A".repeat(101),
+        price: 5.0,
+        currency: "USD",
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe(
+          "Product name must be 100 characters or less"
+        );
+      }
+    });
+
+    it("rejects zero price", () => {
+      const result = productSchema.safeParse({
+        name: "Free Item",
+        price: 0,
+        currency: "USD",
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe("Price must be greater than 0");
+      }
+    });
+
+    it("rejects negative price", () => {
+      const result = productSchema.safeParse({
+        name: "Bad Price",
+        price: -5.0,
+        currency: "USD",
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it("rejects prices with more than 2 decimal places", () => {
+      const result = productSchema.safeParse({
+        name: "Precise Item",
+        price: 5.123,
+        currency: "USD",
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe(
+          "Price can have at most 2 decimal places"
+        );
+      }
+    });
+
+    it("rejects invalid currency", () => {
+      const result = productSchema.safeParse({
+        name: "Item",
+        price: 5.0,
+        currency: "EUR",
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe("Please select USD or KHR");
+      }
+    });
+
+    it("trims whitespace from product name", () => {
+      const result = productSchema.safeParse({
+        name: "  Padded Item  ",
+        price: 5.0,
+        currency: "USD",
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.name).toBe("Padded Item");
+      }
+    });
+  });
+
+  describe("productsArraySchema", () => {
+    it("accepts array with one product", () => {
+      const result = productsArraySchema.safeParse({
+        products: [{ name: "Coffee", price: 2.5, currency: "USD" }],
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it("accepts array with multiple products", () => {
+      const result = productsArraySchema.safeParse({
+        products: [
+          { name: "Coffee", price: 2.5, currency: "USD" },
+          { name: "បាយឆា", price: 4.0, currency: "USD" },
+          { name: "Noodles", price: 20000, currency: "KHR" },
+        ],
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it("rejects empty products array", () => {
+      const result = productsArraySchema.safeParse({
+        products: [],
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe("Please add at least one product");
+      }
+    });
+
+    it("rejects if any product is invalid", () => {
+      const result = productsArraySchema.safeParse({
+        products: [
+          { name: "Valid Item", price: 5.0, currency: "USD" },
+          { name: "", price: 5.0, currency: "USD" }, // Invalid: empty name
+        ],
+      });
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe("formatPrice", () => {
+    it("formats USD prices correctly", () => {
+      expect(formatPrice(5, "USD")).toBe("$5.00");
+      expect(formatPrice(12.5, "USD")).toBe("$12.50");
+      expect(formatPrice(0.99, "USD")).toBe("$0.99");
+    });
+
+    it("formats KHR prices correctly", () => {
+      expect(formatPrice(5000, "KHR")).toBe("5,000៛");
+      expect(formatPrice(20000, "KHR")).toBe("20,000៛");
+      expect(formatPrice(100, "KHR")).toBe("100៛");
     });
   });
 });

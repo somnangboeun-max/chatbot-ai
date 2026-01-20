@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { OnboardingWizard } from "@/components/features/onboarding/OnboardingWizard";
+import { getProducts } from "@/actions/onboarding";
 
 const VALID_STEPS = ["1", "2", "3", "4", "5", "review"];
 const TOTAL_STEPS = 5;
@@ -13,13 +14,14 @@ interface OnboardingStepPageProps {
  * Dynamic Onboarding Step Page
  *
  * Handles routing for each step of the onboarding wizard.
- * Steps 1-4 are implemented in this story (2.1):
+ * Steps 1-5 are implemented:
  *   1. Business Name
  *   2. Business Hours
  *   3. Location
  *   4. Contact Phone
+ *   5. Products & Prices
  *
- * Step 5 (Products) and Review are implemented in Stories 2.2 and 2.3.
+ * Review step is implemented in Story 2.3.
  */
 export default async function OnboardingStepPage({
   params,
@@ -90,6 +92,25 @@ export default async function OnboardingStepPage({
     }
   }
 
+  // Fetch products for step 5 and review
+  let productsData: Array<{
+    id: string;
+    name: string;
+    price: number;
+    currency: "USD" | "KHR";
+  }> = [];
+  if (step === "5" || step === "review") {
+    const productsResult = await getProducts();
+    if (productsResult.success) {
+      productsData = productsResult.data.map((p) => ({
+        id: p.id ?? "",
+        name: p.name,
+        price: p.price,
+        currency: p.currency,
+      }));
+    }
+  }
+
   return (
     <OnboardingWizard
       currentStep={currentStep}
@@ -104,6 +125,7 @@ export default async function OnboardingStepPage({
         city: addressData.city,
         landmarks: addressData.landmarks,
         phone: business?.phone ?? "",
+        products: productsData,
       }}
     />
   );

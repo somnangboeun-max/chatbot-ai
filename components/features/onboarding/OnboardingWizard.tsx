@@ -7,6 +7,7 @@ import { StepBusinessName } from "./StepBusinessName";
 import { StepBusinessHours } from "./StepBusinessHours";
 import { StepLocation } from "./StepLocation";
 import { StepContact } from "./StepContact";
+import { StepProducts } from "./StepProducts";
 
 interface OnboardingWizardProps {
   currentStep: number;
@@ -54,14 +55,7 @@ export function OnboardingWizard({
       case 4:
         return <StepContact />;
       case 5:
-        // Products step - implemented in Story 2.2
-        return (
-          <div className="text-center py-8">
-            <p className="text-muted-foreground">
-              Products & Prices step coming in Story 2.2
-            </p>
-          </div>
-        );
+        return <StepProducts />;
       case 6:
         // Review step - implemented in Story 2.3
         return (

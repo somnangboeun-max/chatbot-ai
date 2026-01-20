@@ -8,6 +8,13 @@ export interface DayHours {
   closed?: boolean;
 }
 
+export interface ProductData {
+  id?: string;
+  name: string;
+  price: number;
+  currency: "USD" | "KHR";
+}
+
 export interface OnboardingData {
   name: string;
   opening_hours: Record<string, DayHours>;
@@ -15,6 +22,7 @@ export interface OnboardingData {
   city?: string;
   landmarks?: string;
   phone: string;
+  products?: ProductData[];
 }
 
 interface OnboardingContextType {

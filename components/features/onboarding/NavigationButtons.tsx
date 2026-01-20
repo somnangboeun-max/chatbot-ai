@@ -8,6 +8,7 @@ interface NavigationButtonsProps {
   isSubmitting?: boolean;
   isValid?: boolean;
   onSubmit?: () => void;
+  onBack?: () => void;
   submitLabel?: string;
 }
 
@@ -22,12 +23,15 @@ export function NavigationButtons({
   isSubmitting = false,
   isValid = true,
   onSubmit,
+  onBack,
   submitLabel = "Continue",
 }: NavigationButtonsProps) {
   const router = useRouter();
 
   const handleBack = () => {
-    if (currentStep > 1) {
+    if (onBack) {
+      onBack();
+    } else if (currentStep > 1) {
       router.push(`/onboarding/${currentStep - 1}`);
     }
   };

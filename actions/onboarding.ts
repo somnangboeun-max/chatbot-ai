@@ -8,10 +8,13 @@ import {
   businessHoursSchema,
   locationSchema,
   contactSchema,
+  productsArraySchema,
   type BusinessNameInput,
   type BusinessHoursInput,
   type LocationInput,
   type ContactInput,
+  type ProductInput,
+  type ProductsInput,
 } from "@/lib/validations/onboarding";
 
 /**
@@ -437,4 +440,157 @@ export async function completeOnboarding(): Promise<ActionResult<void>> {
   revalidatePath("/dashboard");
 
   return { success: true, data: undefined };
+}
+
+/**
+ * Save Step 5: Products
+ *
+ * Saves products for the current tenant.
+ * Uses full replacement strategy: deletes existing, inserts new array.
+ */
+export async function saveProducts(
+  data: ProductsInput
+): Promise<ActionResult<{ nextStep: string }>> {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return {
+      success: false,
+      error: { code: "UNAUTHORIZED", message: "Not authenticated" },
+    };
+  }
+
+  const validated = productsArraySchema.safeParse(data);
+  if (!validated.success) {
+    return {
+      success: false,
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "Invalid products data",
+        details: validated.error.flatten().fieldErrors as Record<
+          string,
+          string[]
+        >,
+      },
+    };
+  }
+
+  const tenantId = user.app_metadata?.tenant_id;
+  if (!tenantId) {
+    return {
+      success: false,
+      error: { code: "FORBIDDEN", message: "No business associated" },
+    };
+  }
+
+  // Delete existing products for this tenant (full replacement)
+  const { error: deleteError } = await supabase
+    .from("products")
+    .delete()
+    .eq("tenant_id", tenantId);
+
+  if (deleteError) {
+    console.error("[ERROR] [ONBOARDING] Delete products failed:", {
+      tenantId,
+      error: deleteError.message,
+    });
+    return {
+      success: false,
+      error: { code: "SERVER_ERROR", message: "Failed to save. Please try again." },
+    };
+  }
+
+  // Insert new products
+  const productsToInsert = validated.data.products.map((p) => ({
+    tenant_id: tenantId,
+    name: p.name,
+    price: p.price,
+    currency: p.currency,
+    is_active: true,
+  }));
+
+  const { error: insertError } = await supabase
+    .from("products")
+    .insert(productsToInsert);
+
+  if (insertError) {
+    console.error("[ERROR] [ONBOARDING] Insert products failed:", {
+      tenantId,
+      count: productsToInsert.length,
+      error: insertError.message,
+    });
+    return {
+      success: false,
+      error: { code: "SERVER_ERROR", message: "Failed to save. Please try again." },
+    };
+  }
+
+  console.info("[INFO] [ONBOARDING] Step 5 saved:", {
+    tenantId,
+    productCount: productsToInsert.length,
+  });
+  revalidatePath("/onboarding");
+
+  return { success: true, data: { nextStep: "review" } };
+}
+
+/**
+ * Get Products for Tenant
+ *
+ * Fetches all active products for the current tenant.
+ */
+export async function getProducts(): Promise<ActionResult<ProductInput[]>> {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return {
+      success: false,
+      error: { code: "UNAUTHORIZED", message: "Not authenticated" },
+    };
+  }
+
+  const tenantId = user.app_metadata?.tenant_id;
+  if (!tenantId) {
+    return {
+      success: false,
+      error: { code: "FORBIDDEN", message: "No business associated" },
+    };
+  }
+
+  const { data: products, error } = await supabase
+    .from("products")
+    .select("id, name, price, currency")
+    .eq("tenant_id", tenantId)
+    .eq("is_active", true)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error("[ERROR] [ONBOARDING] Fetch products failed:", {
+      tenantId,
+      error: error.message,
+    });
+    return {
+      success: false,
+      error: { code: "SERVER_ERROR", message: "Failed to load products" },
+    };
+  }
+
+  return {
+    success: true,
+    data: products.map((p) => ({
+      id: p.id,
+      name: p.name,
+      price: Number(p.price),
+      currency: p.currency as "USD" | "KHR",
+    })),
+  };
 }

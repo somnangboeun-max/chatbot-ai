@@ -88,6 +88,47 @@ export type Database = {
           },
         ];
       };
+      products: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          name: string;
+          price: number;
+          currency: "USD" | "KHR";
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          tenant_id: string;
+          name: string;
+          price: number;
+          currency?: "USD" | "KHR";
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          tenant_id?: string;
+          name?: string;
+          price?: number;
+          currency?: "USD" | "KHR";
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "products_tenant_id_fkey";
+            columns: ["tenant_id"];
+            isOneToOne: false;
+            referencedRelation: "businesses";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -127,3 +168,7 @@ export type TablesUpdate<T extends keyof Database["public"]["Tables"]> =
 export type Business = Tables<"businesses">;
 export type BusinessInsert = TablesInsert<"businesses">;
 export type BusinessUpdate = TablesUpdate<"businesses">;
+
+export type Product = Tables<"products">;
+export type ProductInsert = TablesInsert<"products">;
+export type ProductUpdate = TablesUpdate<"products">;

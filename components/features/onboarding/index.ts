@@ -1,6 +1,6 @@
 export { OnboardingWizard } from "./OnboardingWizard";
 export { OnboardingProvider, useOnboarding } from "./OnboardingContext";
-export type { OnboardingData, DayHours } from "./OnboardingContext";
+export type { OnboardingData, DayHours, ProductData } from "./OnboardingContext";
 export { ProgressDots } from "./ProgressDots";
 export { StepContainer } from "./StepContainer";
 export { NavigationButtons } from "./NavigationButtons";
@@ -9,3 +9,5 @@ export { StepBusinessHours } from "./StepBusinessHours";
 export { DayHoursRow } from "./DayHoursRow";
 export { StepLocation } from "./StepLocation";
 export { StepContact } from "./StepContact";
+export { StepProducts } from "./StepProducts";
+export { ProductCard } from "./ProductCard";
