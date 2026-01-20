@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -26,6 +26,8 @@ import {
  */
 export function StepBusinessHours() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnTo = searchParams.get("returnTo");
   const { data, updateData } = useOnboarding();
 
   const form = useForm<BusinessHoursInput>({
@@ -49,7 +51,9 @@ export function StepBusinessHours() {
 
       // Update context and navigate
       updateData("opening_hours", values.opening_hours);
-      router.push(`/onboarding/${result.data.nextStep}`);
+      // If returnTo=review, go back to review step
+      const nextPath = returnTo === "review" ? "/onboarding/review" : `/onboarding/${result.data.nextStep}`;
+      router.push(nextPath);
     } catch (error) {
       console.error("[ERROR] [ONBOARDING] Step 2 submit failed:", error);
       toast.error("Something went wrong. Please try again.");

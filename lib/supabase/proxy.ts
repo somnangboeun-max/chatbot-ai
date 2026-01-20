@@ -105,7 +105,8 @@ export async function updateSession(request: NextRequest) {
 
   // Check if user is on onboarding but has already completed it
   const isOnboardingRoute = request.nextUrl.pathname.startsWith("/onboarding");
-  if (isOnboardingRoute && user) {
+  const isCelebrationRoute = request.nextUrl.pathname === "/onboarding/celebration";
+  if (isOnboardingRoute && user && !isCelebrationRoute) {
     const tenantId = user.app_metadata?.tenant_id;
     if (tenantId) {
       const { data: business } = await supabase

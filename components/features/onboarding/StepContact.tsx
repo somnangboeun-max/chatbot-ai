@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -28,6 +28,8 @@ import { contactSchema, type ContactInput } from "@/lib/validations/onboarding";
  */
 export function StepContact() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnTo = searchParams.get("returnTo");
   const { data, updateData } = useOnboarding();
 
   const form = useForm<ContactInput>({
@@ -48,7 +50,9 @@ export function StepContact() {
 
       // Update context and navigate to products step (Story 2.2)
       updateData("phone", values.phone);
-      router.push(`/onboarding/${result.data.nextStep}`);
+      // If returnTo=review, go back to review step
+      const nextPath = returnTo === "review" ? "/onboarding/review" : `/onboarding/${result.data.nextStep}`;
+      router.push(nextPath);
     } catch (error) {
       console.error("[ERROR] [ONBOARDING] Step 4 submit failed:", error);
       toast.error("Something went wrong. Please try again.");

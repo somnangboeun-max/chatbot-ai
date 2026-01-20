@@ -8,6 +8,7 @@ import { StepBusinessHours } from "./StepBusinessHours";
 import { StepLocation } from "./StepLocation";
 import { StepContact } from "./StepContact";
 import { StepProducts } from "./StepProducts";
+import { StepReview } from "./StepReview";
 
 interface OnboardingWizardProps {
   currentStep: number;
@@ -57,14 +58,7 @@ export function OnboardingWizard({
       case 5:
         return <StepProducts />;
       case 6:
-        // Review step - implemented in Story 2.3
-        return (
-          <div className="text-center py-8">
-            <p className="text-muted-foreground">
-              Review & Complete step coming in Story 2.3
-            </p>
-          </div>
-        );
+        return <StepReview />;
       default:
         return null;
     }

@@ -11,3 +11,5 @@ export { StepLocation } from "./StepLocation";
 export { StepContact } from "./StepContact";
 export { StepProducts } from "./StepProducts";
 export { ProductCard } from "./ProductCard";
+export { StepReview } from "./StepReview";
+export { CelebrationScreen } from "./CelebrationScreen";

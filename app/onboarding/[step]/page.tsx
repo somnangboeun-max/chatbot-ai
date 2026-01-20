@@ -3,8 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { OnboardingWizard } from "@/components/features/onboarding/OnboardingWizard";
 import { getProducts } from "@/actions/onboarding";
 
-const VALID_STEPS = ["1", "2", "3", "4", "5", "review"];
-const TOTAL_STEPS = 5;
+const VALID_STEPS = ["1", "2", "3", "4", "5", "6", "review"];
+const TOTAL_STEPS = 6;
 
 interface OnboardingStepPageProps {
   params: Promise<{ step: string }>;
@@ -69,8 +69,8 @@ export default async function OnboardingStepPage({
     redirect("/dashboard");
   }
 
-  // Parse step number (handle "review" as a special case)
-  const currentStep = step === "review" ? TOTAL_STEPS + 1 : parseInt(step, 10);
+  // Parse step number (handle "review" and "6" as the review step)
+  const currentStep = step === "review" || step === "6" ? 6 : parseInt(step, 10);
 
   // Parse location data - handle both JSON and legacy string formats
   let addressData = { street: "", city: "", landmarks: "" };
@@ -92,14 +92,14 @@ export default async function OnboardingStepPage({
     }
   }
 
-  // Fetch products for step 5 and review
+  // Fetch products for step 5 and review (step 6)
   let productsData: Array<{
     id: string;
     name: string;
     price: number;
     currency: "USD" | "KHR";
   }> = [];
-  if (step === "5" || step === "review") {
+  if (step === "5" || step === "6" || step === "review") {
     const productsResult = await getProducts();
     if (productsResult.success) {
       productsData = productsResult.data.map((p) => ({

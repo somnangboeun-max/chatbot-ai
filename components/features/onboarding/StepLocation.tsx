@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -32,6 +32,8 @@ import {
  */
 export function StepLocation() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnTo = searchParams.get("returnTo");
   const { data, updatePartialData } = useOnboarding();
 
   const form = useForm<LocationInput>({
@@ -58,7 +60,9 @@ export function StepLocation() {
         city: values.city,
         landmarks: values.landmarks,
       });
-      router.push(`/onboarding/${result.data.nextStep}`);
+      // If returnTo=review, go back to review step
+      const nextPath = returnTo === "review" ? "/onboarding/review" : `/onboarding/${result.data.nextStep}`;
+      router.push(nextPath);
     } catch (error) {
       console.error("[ERROR] [ONBOARDING] Step 3 submit failed:", error);
       toast.error("Something went wrong. Please try again.");
