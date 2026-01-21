@@ -11,3 +11,5 @@ export { ProductList } from "./ProductList";
 export { ProductEditCard } from "./ProductEditCard";
 export { AddProductForm } from "./AddProductForm";
 export { DeleteProductDialog } from "./DeleteProductDialog";
+export { NotificationSettings } from "./NotificationSettings";
+export { TestNotificationButton } from "./TestNotificationButton";
