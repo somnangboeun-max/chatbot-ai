@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Building2, Package, Bell, User, ChevronLeft } from "lucide-react";
+import { Building2, Package, Bell, User } from "lucide-react";
 
 export const metadata = {
   title: "Settings",
@@ -37,16 +36,6 @@ const settingsItems = [
 export default function SettingsPage() {
   return (
     <div className="container max-w-lg mx-auto px-4 py-6">
-      {/* Back Navigation */}
-      <div className="mb-4">
-        <Link href="/dashboard">
-          <Button variant="ghost" size="sm" className="gap-1 -ml-2">
-            <ChevronLeft className="h-4 w-4" />
-            Dashboard
-          </Button>
-        </Link>
-      </div>
-
       <h1 className="text-2xl font-bold mb-6">Settings</h1>
 
       <div className="space-y-3">
