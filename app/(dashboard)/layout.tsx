@@ -5,6 +5,10 @@ import { BottomNavigation } from "@/components/layout/BottomNavigation";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getDashboardData } from "@/actions/dashboard";
 
+export const metadata = {
+  title: "Dashboard",
+};
+
 async function DashboardHeaderWrapper() {
   const result = await getDashboardData();
 

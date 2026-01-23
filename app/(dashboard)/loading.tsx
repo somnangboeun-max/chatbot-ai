@@ -6,11 +6,21 @@ export default function DashboardLoading() {
     <div className="container max-w-lg mx-auto px-4 py-6">
       <Skeleton className="h-8 w-32 mb-6" />
 
-      {/* Hero card skeleton */}
+      {/* Hero Summary Card skeleton */}
       <Card className="mb-6">
-        <CardContent className="py-8">
-          <Skeleton className="h-12 w-24 mx-auto mb-4" />
-          <Skeleton className="h-4 w-48 mx-auto" />
+        <CardContent className="py-6">
+          <Skeleton className="h-10 w-20 mb-2" />
+          <Skeleton className="h-4 w-40" />
+          <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t">
+            <div>
+              <Skeleton className="h-7 w-12 mb-1" />
+              <Skeleton className="h-3 w-24" />
+            </div>
+            <div>
+              <Skeleton className="h-7 w-12 mb-1" />
+              <Skeleton className="h-3 w-24" />
+            </div>
+          </div>
         </CardContent>
       </Card>
 

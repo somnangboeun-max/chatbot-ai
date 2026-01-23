@@ -1,24 +1,45 @@
+import { Suspense } from "react";
 import { Card, CardContent } from "@/components/ui/card";
+import { getDashboardStats } from "@/actions/dashboard";
+import { HeroSummaryCardWrapper } from "@/components/features/dashboard/HeroSummaryCardWrapper";
+import { HeroSummaryCardSkeleton } from "@/components/features/dashboard/HeroSummaryCard";
 
-export const metadata = {
-  title: "Dashboard",
+const emptyStats = {
+  messagesHandledToday: 0,
+  messagesHandledThisWeek: 0,
+  overnightMessages: 0,
+  ordersCaptured: 0,
+  attentionNeeded: 0,
+  hasOvernightMessages: false,
 };
+
+async function HeroSummaryCardAsync() {
+  const result = await getDashboardStats();
+
+  if (!result.success) {
+    return (
+      <HeroSummaryCardWrapper initialStats={emptyStats} tenantId="" />
+    );
+  }
+
+  return (
+    <HeroSummaryCardWrapper
+      initialStats={result.data.stats}
+      tenantId={result.data.tenantId}
+    />
+  );
+}
 
 export default function DashboardPage() {
   return (
     <div className="container max-w-lg mx-auto px-4 py-6">
       <h2 className="text-2xl font-bold mb-6">Dashboard</h2>
 
-      {/* Placeholder for HeroSummaryCard (Story 3.2) */}
+      {/* Hero Summary Card with real-time stats */}
       <div className="mb-6">
-        <Card>
-          <CardContent className="py-8 text-center">
-            <p className="text-muted-foreground">Ready to help your customers!</p>
-            <p className="text-sm text-muted-foreground mt-2">
-              Connect your Facebook Page to start receiving messages.
-            </p>
-          </CardContent>
-        </Card>
+        <Suspense fallback={<HeroSummaryCardSkeleton />}>
+          <HeroSummaryCardAsync />
+        </Suspense>
       </div>
 
       {/* Placeholder for AttentionItems (Story 3.4) */}
