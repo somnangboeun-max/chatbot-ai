@@ -1,30 +1,35 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { DashboardHeader } from "@/components/layout/DashboardHeader";
+import { DashboardHeaderClient } from "@/components/layout/DashboardHeaderClient";
 import { BottomNavigation } from "@/components/layout/BottomNavigation";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getDashboardData } from "@/actions/dashboard";
+import { getDashboardDataCached } from "@/lib/queries/dashboard";
 
 export const metadata = {
   title: "Dashboard",
 };
 
 async function DashboardHeaderWrapper() {
-  const result = await getDashboardData();
+  const result = await getDashboardDataCached();
 
   if (!result.success) {
     if (result.error.code === "UNAUTHORIZED" || result.error.code === "FORBIDDEN") {
       redirect("/auth/login");
     }
     return (
-      <DashboardHeader businessName="My Business" botActive={true} />
+      <DashboardHeaderClient
+        businessName="My Business"
+        initialBotActive={true}
+        tenantId=""
+      />
     );
   }
 
   return (
-    <DashboardHeader
+    <DashboardHeaderClient
       businessName={result.data.businessName}
-      botActive={result.data.botActive}
+      initialBotActive={result.data.botActive}
+      tenantId={result.data.tenantId}
     />
   );
 }
