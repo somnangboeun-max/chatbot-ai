@@ -1,10 +1,11 @@
 import { Suspense } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { getDashboardStats } from "@/actions/dashboard";
+import { getDashboardStats, getAttentionItems } from "@/actions/dashboard";
 import { getDashboardDataCached } from "@/lib/queries/dashboard";
 import { HeroSummaryCardWrapper } from "@/components/features/dashboard/HeroSummaryCardWrapper";
 import { HeroSummaryCardSkeleton } from "@/components/features/dashboard/HeroSummaryCard";
 import { BotStatusToggleWrapper } from "@/components/features/dashboard/BotStatusToggleWrapper";
+import { AttentionItemListWrapper } from "@/components/features/dashboard/AttentionItemListWrapper";
 
 const emptyStats = {
   messagesHandledToday: 0,
@@ -53,6 +54,46 @@ async function BotStatusToggleAsync() {
   );
 }
 
+async function AttentionItemListAsync() {
+  const result = await getAttentionItems();
+
+  if (!result.success) {
+    return <AttentionItemListWrapper initialItems={[]} tenantId="" />;
+  }
+
+  return (
+    <AttentionItemListWrapper
+      initialItems={result.data.items}
+      tenantId={result.data.tenantId}
+    />
+  );
+}
+
+function AttentionItemListSkeleton() {
+  return (
+    <div>
+      <div className="h-7 w-48 bg-muted rounded mb-4 animate-pulse" />
+      <Card>
+        <CardContent className="p-0">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="flex items-start gap-3 p-3 border-b last:border-b-0 animate-pulse">
+              <div className="h-10 w-10 rounded-full bg-muted shrink-0" />
+              <div className="flex-1">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="h-4 w-24 bg-muted rounded" />
+                  <div className="h-3 w-16 bg-muted rounded" />
+                </div>
+                <div className="h-4 w-48 bg-muted rounded mt-1" />
+                <div className="h-5 w-20 bg-muted rounded mt-1.5" />
+              </div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 function BotStatusToggleSkeleton() {
   return (
     <div className="flex items-center justify-between p-4 rounded-lg border animate-pulse">
@@ -87,14 +128,11 @@ export default function DashboardPage() {
         </Suspense>
       </div>
 
-      {/* Placeholder for AttentionItems (Story 3.4) */}
+      {/* Attention Items List */}
       <div>
-        <h3 className="text-lg font-semibold mb-4">Attention Needed</h3>
-        <Card>
-          <CardContent className="py-8 text-center">
-            <p className="text-muted-foreground">All caught up!</p>
-          </CardContent>
-        </Card>
+        <Suspense fallback={<AttentionItemListSkeleton />}>
+          <AttentionItemListAsync />
+        </Suspense>
       </div>
     </div>
   );

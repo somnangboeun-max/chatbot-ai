@@ -24,6 +24,9 @@ export type ActionResult<T> =
       };
     };
 
+// Re-export dashboard types
+export type { HandoverReason, AttentionItem, DashboardStats, DashboardStatsResult } from "./dashboard";
+
 // Re-export database types
 // Note: database.types.ts should be regenerated with `npm run db:types`
 // after applying migrations to Supabase

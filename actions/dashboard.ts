@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/types";
-import type { DashboardStats, DashboardStatsResult } from "@/types/dashboard";
+import type { AttentionItem, DashboardStats, DashboardStatsResult, HandoverReason } from "@/types/dashboard";
 import { getDashboardDataCached } from "@/lib/queries/dashboard";
 
 export type { DashboardData } from "@/lib/queries/dashboard";
@@ -110,6 +110,66 @@ export async function getDashboardStats(): Promise<ActionResult<DashboardStatsRe
     return {
       success: false,
       error: { code: "SERVER_ERROR", message: "Failed to load stats" },
+    };
+  }
+}
+
+export interface AttentionItemsResult {
+  items: AttentionItem[];
+  tenantId: string;
+}
+
+export async function getAttentionItems(): Promise<ActionResult<AttentionItemsResult>> {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return {
+      success: false,
+      error: { code: "UNAUTHORIZED", message: "Not authenticated" },
+    };
+  }
+
+  const tenantId = user.app_metadata?.tenant_id;
+  if (!tenantId) {
+    return {
+      success: false,
+      error: { code: "FORBIDDEN", message: "No business associated" },
+    };
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("conversations")
+      .select("id, customer_name, customer_avatar_url, handover_reason, last_message_preview, last_message_at, viewed_at")
+      .eq("tenant_id", tenantId)
+      .eq("status", "needs_attention")
+      .order("last_message_at", { ascending: false })
+      .limit(10);
+
+    if (error) throw error;
+
+    const items: AttentionItem[] = (data ?? []).map((row) => ({
+      id: row.id,
+      customerName: row.customer_name ?? "Unknown Customer",
+      customerAvatarUrl: row.customer_avatar_url,
+      handoverReason: row.handover_reason as HandoverReason | null,
+      messagePreview: row.last_message_preview,
+      lastMessageAt: row.last_message_at,
+      viewedAt: row.viewed_at,
+    }));
+
+    console.info("[INFO] [DASHBOARD] Attention items fetched:", { tenantId, count: items.length });
+    return { success: true, data: { items, tenantId } };
+  } catch (error) {
+    console.error("[ERROR] [DASHBOARD] Attention items fetch failed:", { tenantId, error });
+    return {
+      success: false,
+      error: { code: "SERVER_ERROR", message: "Failed to load attention items" },
     };
   }
 }
