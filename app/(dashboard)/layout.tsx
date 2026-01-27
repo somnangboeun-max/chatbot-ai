@@ -2,8 +2,10 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { DashboardHeaderClient } from "@/components/layout/DashboardHeaderClient";
 import { BottomNavigation } from "@/components/layout/BottomNavigation";
+import { BottomNavigationWrapper } from "@/components/layout/BottomNavigationWrapper";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getDashboardDataCached } from "@/lib/queries/dashboard";
+import { getDashboardStats } from "@/actions/dashboard";
 
 export const metadata = {
   title: "Dashboard",
@@ -48,6 +50,21 @@ function HeaderSkeleton() {
   );
 }
 
+async function BottomNavigationContainer() {
+  const statsResult = await getDashboardStats();
+
+  if (!statsResult.success) {
+    return <BottomNavigation messagesCount={0} />;
+  }
+
+  return (
+    <BottomNavigationWrapper
+      initialCount={statsResult.data.stats.attentionNeeded}
+      tenantId={statsResult.data.tenantId}
+    />
+  );
+}
+
 export default function DashboardLayout({
   children,
 }: {
@@ -59,7 +76,9 @@ export default function DashboardLayout({
         <DashboardHeaderWrapper />
       </Suspense>
       <main className="flex-1 pb-14">{children}</main>
-      <BottomNavigation />
+      <Suspense fallback={<BottomNavigation />}>
+        <BottomNavigationContainer />
+      </Suspense>
     </div>
   );
 }
