@@ -28,7 +28,10 @@ export type ActionResult<T> =
 export type { HandoverReason, AttentionItem, DashboardStats, DashboardStatsResult } from "./dashboard";
 
 // Re-export conversation types
-export type { ConversationStatus, ConversationListItem } from "./conversations";
+export type { ConversationStatus, ConversationListItem, ConversationDetail } from "./conversations";
+
+// Re-export message types
+export type { MessageSenderType, Message } from "./messages";
 
 // Re-export database types
 // Note: database.types.ts should be regenerated with `npm run db:types`
