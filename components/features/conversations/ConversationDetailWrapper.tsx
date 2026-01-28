@@ -37,6 +37,8 @@ export function ConversationDetailWrapper({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   // Use ref for isScrolledUp to avoid recreating subscription on scroll changes
   const isScrolledUpRef = useRef(false);
+  // Track if component is mounted to prevent stale closure issues in async callbacks
+  const isMountedRef = useRef(true);
 
   // Keep ref in sync with state
   useEffect(() => {
@@ -92,6 +94,14 @@ export function ConversationDetailWrapper({
     }
   }, []);
 
+  // Set mounted ref on mount/unmount
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   // Subscribe to real-time message updates
   useEffect(() => {
     if (!conversationId || !tenantId) return;
@@ -109,6 +119,8 @@ export function ConversationDetailWrapper({
           filter: `conversation_id=eq.${conversationId}`,
         },
         (payload) => {
+          if (!isMountedRef.current) return;
+
           const newMsg = payload.new as {
             id: string;
             conversation_id: string;
@@ -134,13 +146,48 @@ export function ConversationDetailWrapper({
           if (isScrolledUpRef.current) {
             setNewMessageCount((prev) => prev + 1);
           } else {
-            // Auto-scroll to bottom
+            // Auto-scroll to bottom with mounted check
             requestAnimationFrame(() => {
-              if (scrollContainerRef.current) {
+              if (isMountedRef.current && scrollContainerRef.current) {
                 scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
               }
             });
           }
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "messages",
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        (payload) => {
+          if (!isMountedRef.current) return;
+
+          const updatedMsg = payload.new as {
+            id: string;
+            conversation_id: string;
+            sender_type: string;
+            content: string;
+            created_at: string;
+            is_handover_trigger: boolean | null;
+          };
+
+          const parsedSenderType = messageSenderTypeSchema.safeParse(updatedMsg.sender_type);
+          const updatedMessage: Message = {
+            id: updatedMsg.id,
+            conversationId: updatedMsg.conversation_id,
+            senderType: parsedSenderType.success ? parsedSenderType.data : "customer",
+            content: updatedMsg.content,
+            createdAt: updatedMsg.created_at,
+            isHandoverTrigger: updatedMsg.is_handover_trigger ?? false,
+          };
+
+          setMessages((prev) =>
+            prev.map((m) => (m.id === updatedMessage.id ? updatedMessage : m))
+          );
         }
       )
       .on(
@@ -152,6 +199,7 @@ export function ConversationDetailWrapper({
           filter: `conversation_id=eq.${conversationId}`,
         },
         (payload) => {
+          if (!isMountedRef.current) return;
           const deletedMsg = payload.old as { id: string };
           setMessages((prev) => prev.filter((m) => m.id !== deletedMsg.id));
         }

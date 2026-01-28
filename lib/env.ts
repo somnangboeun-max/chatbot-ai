@@ -19,6 +19,11 @@ const envSchema = z.object({
   // Facebook Messenger (optional for Story 1.1, required for Story 4.x)
   FACEBOOK_VERIFY_TOKEN: z.string().min(1).optional(),
   FACEBOOK_APP_SECRET: z.string().min(1).optional(),
+  FACEBOOK_APP_ID: z.string().min(1).optional(),
+  FACEBOOK_OAUTH_REDIRECT_URI: z.string().url().optional(),
+
+  // Encryption (required for Story 4.x token storage)
+  ENCRYPTION_KEY: z.string().length(64).optional(), // 64 hex chars = 32 bytes
 
   // Telegram (optional for Story 1.1, required for Story 5.x)
   TELEGRAM_BOT_TOKEN: z.string().min(1).optional(),

@@ -106,6 +106,10 @@ describe("MessageThread", () => {
     const thread = screen.getByTestId("message-thread");
     const bubbles = thread.querySelectorAll('[data-testid="message-bubble"]');
     expect(bubbles).toHaveLength(0);
+
+    // Should show empty state UI
+    expect(screen.getByText("No messages yet")).toBeInTheDocument();
+    expect(screen.getByText("Messages will appear here when the conversation starts")).toBeInTheDocument();
   });
 
   it("passes customer info to MessageBubble components", () => {

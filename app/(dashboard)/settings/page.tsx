@@ -1,6 +1,8 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
-import { Building2, Package, Bell, User } from "lucide-react";
+import { Building2, Package, Bell, User, Facebook } from "lucide-react";
+import { SettingsErrorHandler } from "@/components/features/settings/SettingsErrorHandler";
 
 export const metadata = {
   title: "Settings",
@@ -20,6 +22,12 @@ const settingsItems = [
     description: "Manage your product catalog",
   },
   {
+    href: "/settings/facebook",
+    icon: Facebook,
+    title: "Facebook Page",
+    description: "Connect your business page",
+  },
+  {
     href: "/settings/notifications",
     icon: Bell,
     title: "Notifications",
@@ -36,6 +44,10 @@ const settingsItems = [
 export default function SettingsPage() {
   return (
     <div className="container max-w-lg mx-auto px-4 py-6">
+      <Suspense fallback={null}>
+        <SettingsErrorHandler />
+      </Suspense>
+
       <h1 className="text-2xl font-bold mb-6">Settings</h1>
 
       <div className="space-y-3">

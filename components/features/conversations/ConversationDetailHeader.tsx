@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { getInitials } from "@/lib/utils";
 import { ConversationStatusBadge } from "./ConversationStatusBadge";
 import type { ConversationStatus } from "@/types/conversations";
 
@@ -8,17 +9,6 @@ interface ConversationDetailHeaderProps {
   customerName: string;
   customerAvatarUrl: string | null;
   status: ConversationStatus;
-}
-
-function getInitials(name: string): string {
-  return (
-    name
-      ?.split(" ")
-      .map((n) => n[0])
-      .join("")
-      .slice(0, 2)
-      .toUpperCase() || "?"
-  );
 }
 
 export function ConversationDetailHeader({

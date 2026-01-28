@@ -33,6 +33,7 @@ export type Database = {
           phone: string | null;
           facebook_page_id: string | null;
           facebook_page_name: string | null;
+          facebook_page_avatar_url: string | null;
           facebook_access_token: string | null;
           facebook_connected_at: string | null;
           notification_method: "telegram" | "sms" | null;
@@ -52,6 +53,7 @@ export type Database = {
           phone?: string | null;
           facebook_page_id?: string | null;
           facebook_page_name?: string | null;
+          facebook_page_avatar_url?: string | null;
           facebook_access_token?: string | null;
           facebook_connected_at?: string | null;
           notification_method?: "telegram" | "sms" | null;
@@ -71,6 +73,7 @@ export type Database = {
           phone?: string | null;
           facebook_page_id?: string | null;
           facebook_page_name?: string | null;
+          facebook_page_avatar_url?: string | null;
           facebook_access_token?: string | null;
           facebook_connected_at?: string | null;
           notification_method?: "telegram" | "sms" | null;

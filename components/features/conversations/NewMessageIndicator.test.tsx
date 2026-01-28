@@ -39,4 +39,20 @@ describe("NewMessageIndicator", () => {
     expect(button.className).toContain("absolute");
     expect(button.className).toContain("bottom-4");
   });
+
+  it("has correct accessibility attributes", () => {
+    render(<NewMessageIndicator count={3} onClick={vi.fn()} />);
+
+    const button = screen.getByTestId("new-message-indicator");
+    expect(button).toHaveAttribute("role", "status");
+    expect(button).toHaveAttribute("aria-live", "polite");
+    expect(button).toHaveAttribute("aria-label", "3 new messages, click to scroll to bottom");
+  });
+
+  it("has singular aria-label for single message", () => {
+    render(<NewMessageIndicator count={1} onClick={vi.fn()} />);
+
+    const button = screen.getByTestId("new-message-indicator");
+    expect(button).toHaveAttribute("aria-label", "1 new message, click to scroll to bottom");
+  });
 });

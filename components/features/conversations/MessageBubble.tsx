@@ -1,5 +1,5 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { cn } from "@/lib/utils";
+import { cn, getInitials } from "@/lib/utils";
 import { format, isToday, isYesterday } from "date-fns";
 import type { Message } from "@/types/messages";
 
@@ -17,17 +17,6 @@ function formatMessageTime(dateString: string): string {
     return `Yesterday, ${format(date, "h:mm a")}`;
   }
   return format(date, "MMM d, h:mm a");
-}
-
-function getInitials(name: string): string {
-  return (
-    name
-      ?.split(" ")
-      .map((n) => n[0])
-      .join("")
-      .slice(0, 2)
-      .toUpperCase() || "?"
-  );
 }
 
 export function MessageBubble({

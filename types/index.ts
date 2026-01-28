@@ -33,6 +33,9 @@ export type { ConversationStatus, ConversationListItem, ConversationDetail } fro
 // Re-export message types
 export type { MessageSenderType, Message } from "./messages";
 
+// Re-export Facebook types
+export type { FacebookPage, FacebookConnectionStatus, PendingFacebookPages } from "./facebook";
+
 // Re-export database types
 // Note: database.types.ts should be regenerated with `npm run db:types`
 // after applying migrations to Supabase

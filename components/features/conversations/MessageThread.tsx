@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
+import { Loader2, MessageCircle } from "lucide-react";
 import { MessageBubble } from "./MessageBubble";
 import type { Message } from "@/types/messages";
 
@@ -46,14 +46,24 @@ export function MessageThread({
         </div>
       )}
 
-      {sortedMessages.map((message) => (
-        <MessageBubble
-          key={message.id}
-          message={message}
-          customerName={customerName}
-          customerAvatarUrl={customerAvatarUrl}
-        />
-      ))}
+      {sortedMessages.length === 0 ? (
+        <div className="flex flex-col items-center justify-center h-full text-center py-12">
+          <MessageCircle className="h-12 w-12 text-muted-foreground/50 mb-4" />
+          <p className="text-muted-foreground text-sm">No messages yet</p>
+          <p className="text-muted-foreground/70 text-xs mt-1">
+            Messages will appear here when the conversation starts
+          </p>
+        </div>
+      ) : (
+        sortedMessages.map((message) => (
+          <MessageBubble
+            key={message.id}
+            message={message}
+            customerName={customerName}
+            customerAvatarUrl={customerAvatarUrl}
+          />
+        ))
+      )}
     </div>
   );
 }
