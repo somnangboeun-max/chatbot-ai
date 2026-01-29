@@ -16,7 +16,8 @@ const envSchema = z.object({
   // Optional at build time to allow static generation to complete
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
 
-  // Facebook Messenger (optional for Story 1.1, required for Story 4.x)
+  // Facebook Messenger (optional at build time, validated at runtime in webhook handlers)
+  // Required for Story 4.x webhook functionality
   FACEBOOK_VERIFY_TOKEN: z.string().min(1).optional(),
   FACEBOOK_APP_SECRET: z.string().min(1).optional(),
   FACEBOOK_APP_ID: z.string().min(1).optional(),

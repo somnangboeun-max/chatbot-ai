@@ -36,6 +36,18 @@ export type { MessageSenderType, Message } from "./messages";
 // Re-export Facebook types
 export type { FacebookPage, FacebookConnectionStatus, PendingFacebookPages } from "./facebook";
 
+// Re-export Messenger webhook types
+export type {
+  MessengerWebhookPayload,
+  MessengerEntry,
+  MessengerMessaging,
+  MessengerMessage,
+  ParsedMessage,
+  ConversationStatus as WebhookConversationStatus, // Alias for backwards compatibility
+  SenderType,
+  HandoverReason as WebhookHandoverReason,
+} from "./messenger";
+
 // Re-export database types
 // Note: database.types.ts should be regenerated with `npm run db:types`
 // after applying migrations to Supabase
@@ -47,6 +59,12 @@ export type {
   Product,
   ProductInsert,
   ProductUpdate,
+  Conversation,
+  ConversationInsert,
+  ConversationUpdate,
+  Message as DbMessage,
+  MessageInsert,
+  MessageUpdate,
   Tables,
   TablesInsert,
   TablesUpdate,
