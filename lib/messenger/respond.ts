@@ -5,7 +5,7 @@
  * Orchestrates the full response flow:
  * 1. Lookup business and decrypt token
  * 2. Lookup conversation for recipient ID
- * 3. Generate response (MVP: default template)
+ * 3. Generate response via bot engine (rules-based FAQ matching)
  * 4. Send via Messenger with retry
  * 5. Store bot message or escalate on failure
  */
@@ -14,20 +14,22 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { decryptToken } from "@/lib/encryption";
 import { sendMessage } from "./send";
 import { sendWithRetry } from "./retry";
-import { getDefaultResponse } from "@/lib/bot/templates";
+import { getHandoverResponse } from "@/lib/bot/templates";
+import { processMessage } from "@/lib/bot/engine";
+import { CONFIDENCE_THRESHOLD, type ConfidenceLevel } from "@/lib/bot/types";
 
 /**
  * Process an incoming message and send an automated response
  *
  * @param tenantId - The business/tenant ID
  * @param conversationId - The conversation to respond to
- * @param customerMessage - The customer's message (for future FAQ matching)
+ * @param customerMessage - The customer's message for FAQ matching
  *
  * This function:
  * 1. Gets business with encrypted Facebook token
  * 2. Decrypts the Page access token
  * 3. Gets conversation for recipient's Facebook sender ID
- * 4. Generates response (MVP: default acknowledgment)
+ * 4. Generates response via bot engine (rules-based FAQ matching)
  * 5. Sends via Messenger with retry logic
  * 6. Stores bot message on success
  * 7. Escalates conversation on failure
@@ -37,7 +39,7 @@ import { getDefaultResponse } from "@/lib/bot/templates";
 export async function processAndRespond(
   tenantId: string,
   conversationId: string,
-  _customerMessage: string // Prefixed with _ as unused in MVP; Story 4.5 will use for FAQ matching
+  customerMessage: string
 ): Promise<void> {
   const supabase = createAdminClient();
 
@@ -96,8 +98,10 @@ export async function processAndRespond(
     const recipientId = conversation.facebook_sender_id;
     const pageId = business.facebook_page_id;
 
-    // 4. Generate response (MVP: default template; Story 4.5+ adds FAQ matching)
-    const responseText = getDefaultResponse();
+    // 4. Generate response via bot engine (rules-based FAQ matching)
+    const botResult = await processMessage(tenantId, customerMessage);
+    const isHandover = !meetsThreshold(botResult.confidence);
+    const responseText = isHandover ? getHandoverResponse() : botResult.responseText;
 
     // 5. Send with retry
     const result = await sendWithRetry(() =>
@@ -112,6 +116,7 @@ export async function processAndRespond(
         sender_type: "bot",
         content: responseText,
         facebook_message_id: result.messageId,
+        is_handover_trigger: isHandover,
       });
 
       if (insertError) {
@@ -121,6 +126,26 @@ export async function processAndRespond(
         });
       } else {
         console.info("[INFO] [RESPOND] Bot message stored:", { conversationId });
+      }
+
+      // Escalate low-confidence responses to staff
+      if (isHandover) {
+        const { error: handoverError } = await supabase
+          .from("conversations")
+          .update({ status: "needs_attention", handover_reason: "low_confidence" })
+          .eq("id", conversationId);
+
+        if (handoverError) {
+          console.error("[ERROR] [RESPOND] Handover escalation failed:", {
+            conversationId,
+            error: handoverError.message,
+          });
+        } else {
+          console.info("[INFO] [RESPOND] Low-confidence handover triggered:", {
+            conversationId,
+            intent: botResult.intent,
+          });
+        }
       }
     } else {
       // 7. Escalate on failure
@@ -151,4 +176,13 @@ export async function processAndRespond(
       // Ignore escalation failure - nothing more we can do
     }
   }
+}
+
+/**
+ * Check if a confidence level meets the threshold for bot response.
+ * Threshold: respond if high or medium; escalate if low.
+ */
+function meetsThreshold(confidence: ConfidenceLevel): boolean {
+  const order: Record<ConfidenceLevel, number> = { low: 0, medium: 1, high: 2 };
+  return order[confidence] >= order[CONFIDENCE_THRESHOLD];
 }

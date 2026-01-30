@@ -1,6 +1,6 @@
 /**
  * Tests for Response Processing Service
- * Story 4.3: Send Automated Responses via Messenger
+ * Story 4.3 + 4.5: Send Automated Responses via Messenger with FAQ Engine
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from "vitest";
@@ -24,12 +24,19 @@ vi.mock("./retry", () => ({
 }));
 
 vi.mock("@/lib/bot/templates", () => ({
-  getDefaultResponse: vi.fn(() => "សួស្តី! សូមអរគុណសម្រាប់សារ។"),
+  getHandoverResponse: vi.fn(
+    () => "សូមរង់ចាំបន្តិច ខ្ញុំនឹងជូនដំណឹងដល់បុគ្គលិក។"
+  ),
+}));
+
+vi.mock("@/lib/bot/engine", () => ({
+  processMessage: vi.fn(),
 }));
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { decryptToken } from "@/lib/encryption";
 import { sendWithRetry } from "./retry";
+import { processMessage } from "@/lib/bot/engine";
 
 describe("processAndRespond", () => {
   const tenantId = "tenant-123";
@@ -62,6 +69,14 @@ describe("processAndRespond", () => {
     vi.spyOn(console, "info").mockImplementation(() => {});
     vi.spyOn(console, "error").mockImplementation(() => {});
     vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    // Default: engine returns high-confidence response
+    (processMessage as Mock).mockResolvedValue({
+      responseText: "សួស្តី! Coffee មានតម្លៃ $3.50។ សូមអរគុណសម្រាប់ការសាកសួរ!",
+      confidence: "high",
+      intent: "price_query",
+      matchedProduct: "Coffee",
+    });
 
     // Setup Supabase mock chain
     mockBusinessQuery = {
@@ -136,14 +151,18 @@ describe("processAndRespond", () => {
     // Verify send was called
     expect(sendWithRetry).toHaveBeenCalled();
 
+    // Verify engine was called with customer message
+    expect(processMessage).toHaveBeenCalledWith(tenantId, customerMessage);
+
     // Verify message storage
     expect(mockSupabase.from).toHaveBeenCalledWith("messages");
     expect(mockMessageInsert.insert).toHaveBeenCalledWith({
       tenant_id: tenantId,
       conversation_id: conversationId,
       sender_type: "bot",
-      content: "សួស្តី! សូមអរគុណសម្រាប់សារ។",
+      content: "សួស្តី! Coffee មានតម្លៃ $3.50។ សូមអរគុណសម្រាប់ការសាកសួរ!",
       facebook_message_id: "mid.12345",
+      is_handover_trigger: false,
     });
 
     expect(console.info).toHaveBeenCalledWith(
@@ -346,7 +365,7 @@ describe("processAndRespond", () => {
     );
   });
 
-  it("should use default response template", async () => {
+  it("should use engine response when confidence meets threshold", async () => {
     mockBusinessQuery.single.mockResolvedValue({
       data: {
         facebook_access_token: encryptedToken,
@@ -367,12 +386,99 @@ describe("processAndRespond", () => {
 
     await processAndRespond(tenantId, conversationId, customerMessage);
 
-    // Verify the message insert has the correct Khmer content
+    // Verify engine was called and its response was used
+    expect(processMessage).toHaveBeenCalledWith(tenantId, customerMessage);
     expect(mockMessageInsert.insert).toHaveBeenCalledWith(
       expect.objectContaining({
-        content: "សួស្តី! សូមអរគុណសម្រាប់សារ។",
+        content: "សួស្តី! Coffee មានតម្លៃ $3.50។ សូមអរគុណសម្រាប់ការសាកសួរ!",
+        is_handover_trigger: false,
       })
     );
+  });
+
+  it("should use handover response when engine confidence is low", async () => {
+    (processMessage as Mock).mockResolvedValue({
+      responseText: "No match response",
+      confidence: "low",
+      intent: "general_faq",
+    });
+
+    // Need separate mock chains for conversation select vs update
+    let conversationCallCount = 0;
+    const mockConversationSelectChain = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({
+        data: { facebook_sender_id: facebookSenderId },
+        error: null,
+      }),
+    };
+    const mockConversationUpdateChain = {
+      update: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockResolvedValue({ error: null }),
+    };
+
+    mockSupabase.from = vi.fn((table: string) => {
+      if (table === "businesses") return mockBusinessQuery;
+      if (table === "conversations") {
+        conversationCallCount++;
+        if (conversationCallCount === 1) return mockConversationSelectChain;
+        return mockConversationUpdateChain;
+      }
+      if (table === "messages") return mockMessageInsert;
+      return mockBusinessQuery;
+    });
+
+    mockBusinessQuery.single.mockResolvedValue({
+      data: {
+        facebook_access_token: encryptedToken,
+        facebook_page_id: "page-123",
+      },
+      error: null,
+    });
+
+    (sendWithRetry as Mock).mockResolvedValue({
+      success: true,
+      messageId: "mid.12345",
+    });
+
+    await processAndRespond(tenantId, conversationId, customerMessage);
+
+    // Should use handover response with handover trigger flag
+    expect(mockMessageInsert.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: "សូមរង់ចាំបន្តិច ខ្ញុំនឹងជូនដំណឹងដល់បុគ្គលិក។",
+        is_handover_trigger: true,
+      })
+    );
+
+    // Should escalate conversation with handover reason
+    expect(mockConversationUpdateChain.update).toHaveBeenCalledWith({
+      status: "needs_attention",
+      handover_reason: "low_confidence",
+    });
+  });
+
+  it("should handle engine error gracefully and fall back to handover", async () => {
+    (processMessage as Mock).mockRejectedValue(new Error("Engine crashed"));
+
+    mockBusinessQuery.single.mockResolvedValue({
+      data: {
+        facebook_access_token: encryptedToken,
+        facebook_page_id: "page-123",
+      },
+      error: null,
+    });
+
+    mockConversationQuery.single.mockResolvedValue({
+      data: { facebook_sender_id: facebookSenderId },
+      error: null,
+    });
+
+    await processAndRespond(tenantId, conversationId, customerMessage);
+
+    // Should escalate via outer catch-all
+    expect(console.error).toHaveBeenCalled();
   });
 
   it("should handle unexpected error in outer catch-all and attempt escalation", async () => {
