@@ -18,6 +18,12 @@ vi.mock("@/lib/supabase/admin", () => ({
   }),
 }));
 
+// Mock processAndRespond
+const mockProcessAndRespond = vi.fn();
+vi.mock("./respond", () => ({
+  processAndRespond: (...args: unknown[]) => mockProcessAndRespond(...args),
+}));
+
 import { processIncomingMessage } from "./process";
 
 describe("processIncomingMessage", () => {
@@ -44,6 +50,7 @@ describe("processIncomingMessage", () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     vi.spyOn(console, "error").mockImplementation(() => {});
     vi.spyOn(console, "info").mockImplementation(() => {});
+    mockProcessAndRespond.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -360,5 +367,168 @@ describe("processIncomingMessage", () => {
     });
 
     await expect(processIncomingMessage(testMessage)).rejects.toThrow();
+  });
+
+  it("should trigger processAndRespond when bot is active (Story 4.3)", async () => {
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "businesses") {
+        return {
+          select: () => ({
+            eq: () => ({
+              single: () => Promise.resolve({ data: mockBusiness, error: null }),
+            }),
+          }),
+        };
+      }
+      if (table === "conversations") {
+        return {
+          select: () => ({
+            eq: () => ({
+              eq: () => ({
+                single: () => Promise.resolve({ data: mockConversation, error: null }),
+              }),
+            }),
+          }),
+          update: () => ({
+            eq: () => Promise.resolve({ error: null }),
+          }),
+        };
+      }
+      if (table === "messages") {
+        return {
+          select: () => ({
+            eq: () => ({
+              single: () => Promise.resolve({ data: null, error: { code: "PGRST116" } }),
+            }),
+          }),
+          insert: () => Promise.resolve({ error: null }),
+        };
+      }
+      return {};
+    });
+
+    await processIncomingMessage(testMessage);
+
+    // Allow microtasks to run for fire-and-forget Promise
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(mockProcessAndRespond).toHaveBeenCalledWith(
+      mockBusiness.id,
+      mockConversation.id,
+      testMessage.messageText
+    );
+
+    expect(console.info).toHaveBeenCalledWith(
+      "[INFO] [WEBHOOK] Bot response queued:",
+      { conversationId: mockConversation.id }
+    );
+  });
+
+  it("should NOT trigger processAndRespond when bot is paused", async () => {
+    const pausedBusiness = { ...mockBusiness, bot_active: false };
+
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "businesses") {
+        return {
+          select: () => ({
+            eq: () => ({
+              single: () => Promise.resolve({ data: pausedBusiness, error: null }),
+            }),
+          }),
+        };
+      }
+      if (table === "conversations") {
+        return {
+          select: () => ({
+            eq: () => ({
+              eq: () => ({
+                single: () => Promise.resolve({ data: null, error: { code: "PGRST116" } }),
+              }),
+            }),
+          }),
+          insert: () => ({
+            select: () => ({
+              single: () => Promise.resolve({ data: mockConversation, error: null }),
+            }),
+          }),
+          update: () => ({
+            eq: () => Promise.resolve({ error: null }),
+          }),
+        };
+      }
+      if (table === "messages") {
+        return {
+          select: () => ({
+            eq: () => ({
+              single: () => Promise.resolve({ data: null, error: { code: "PGRST116" } }),
+            }),
+          }),
+          insert: () => Promise.resolve({ error: null }),
+        };
+      }
+      return {};
+    });
+
+    await processIncomingMessage(testMessage);
+
+    // Allow microtasks to run
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(mockProcessAndRespond).not.toHaveBeenCalled();
+  });
+
+  it("should handle processAndRespond errors gracefully", async () => {
+    mockProcessAndRespond.mockRejectedValue(new Error("Response failed"));
+
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "businesses") {
+        return {
+          select: () => ({
+            eq: () => ({
+              single: () => Promise.resolve({ data: mockBusiness, error: null }),
+            }),
+          }),
+        };
+      }
+      if (table === "conversations") {
+        return {
+          select: () => ({
+            eq: () => ({
+              eq: () => ({
+                single: () => Promise.resolve({ data: mockConversation, error: null }),
+              }),
+            }),
+          }),
+          update: () => ({
+            eq: () => Promise.resolve({ error: null }),
+          }),
+        };
+      }
+      if (table === "messages") {
+        return {
+          select: () => ({
+            eq: () => ({
+              single: () => Promise.resolve({ data: null, error: { code: "PGRST116" } }),
+            }),
+          }),
+          insert: () => Promise.resolve({ error: null }),
+        };
+      }
+      return {};
+    });
+
+    // Should not throw - fire and forget error handling
+    await processIncomingMessage(testMessage);
+
+    // Allow microtasks to run
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(console.error).toHaveBeenCalledWith(
+      "[ERROR] [WEBHOOK] Response processing failed:",
+      expect.objectContaining({
+        conversationId: mockConversation.id,
+        error: "Response failed",
+      })
+    );
   });
 });

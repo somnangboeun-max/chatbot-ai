@@ -1,16 +1,19 @@
 /**
  * Facebook Messenger Message Processing Service
  * Story 4.2: Messenger Webhook Receiver
+ * Story 4.3: Send Automated Responses via Messenger
  *
  * Processes incoming messages from Facebook Messenger:
  * - Looks up business by Facebook Page ID
  * - Creates or finds existing conversation
  * - Stores message in database
  * - Updates conversation status based on bot_active flag
+ * - Triggers automated response if bot is active (Story 4.3)
  */
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { ParsedMessage } from "@/types/messenger";
+import { processAndRespond } from "./respond";
 
 /**
  * Process an incoming message from Facebook Messenger
@@ -166,11 +169,20 @@ export async function processIncomingMessage(
     botActive: business.bot_active,
   });
 
-  // 6. If bot is active, queue response (Story 4.3 will implement this)
+  // 6. If bot is active, send automated response (Story 4.3)
   if (business.bot_active) {
-    // TODO: Story 4.3 - Queue bot response
-    // For now, just log that we would send a response
-    console.info("[INFO] [WEBHOOK] Bot response would be queued:", {
+    // Fire and forget - don't await to meet 5-second webhook requirement
+    // Use Promise.resolve().then() to defer execution without blocking
+    Promise.resolve()
+      .then(() => processAndRespond(tenantId, conversationId, message.messageText))
+      .catch((err) => {
+        console.error("[ERROR] [WEBHOOK] Response processing failed:", {
+          conversationId,
+          error: err instanceof Error ? err.message : "Unknown error",
+        });
+      });
+
+    console.info("[INFO] [WEBHOOK] Bot response queued:", {
       conversationId,
     });
   }

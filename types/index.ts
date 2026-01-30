@@ -46,6 +46,11 @@ export type {
   ConversationStatus as WebhookConversationStatus, // Alias for backwards compatibility
   SenderType,
   HandoverReason as WebhookHandoverReason,
+  // Send API types (Story 4.3)
+  SendMessagePayload,
+  SendMessageResponse,
+  SendError,
+  SendResult,
 } from "./messenger";
 
 // Re-export database types

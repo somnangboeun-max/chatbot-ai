@@ -94,3 +94,57 @@ export type HandoverReason =
   | "customer_frustrated"
   | "human_requested"
   | "complex_question";
+
+/**
+ * Send API Types
+ * Story 4.3: Send Automated Responses via Messenger
+ *
+ * Types for sending messages via Facebook Messenger Send API
+ * Reference: https://developers.facebook.com/docs/messenger-platform/send-messages
+ */
+
+/**
+ * Payload for sending a message via Send API
+ */
+export interface SendMessagePayload {
+  recipient: {
+    id: string;
+  };
+  message: {
+    text: string;
+  };
+  messaging_type: "RESPONSE" | "UPDATE" | "MESSAGE_TAG";
+}
+
+/**
+ * Success response from Send API
+ */
+export interface SendMessageResponse {
+  recipient_id: string;
+  message_id: string;
+}
+
+/**
+ * Error response from Send API
+ */
+export interface SendError {
+  code: number;
+  message: string;
+  type?: string;
+  error_subcode?: number;
+  fbtrace_id?: string;
+}
+
+/**
+ * Result of a send operation (discriminated union)
+ * Follows the project's ActionResult<T> pattern for type-safe branching.
+ */
+export type SendResult =
+  | { success: true; messageId: string }
+  | {
+      success: false;
+      error: {
+        code: number;
+        message: string;
+      };
+    };
