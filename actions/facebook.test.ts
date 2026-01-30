@@ -354,4 +354,153 @@ describe("disconnectFacebookPage", () => {
       expect(result.error.code).toBe("NOT_FOUND");
     }
   });
+
+  it("successfully disconnects: nullifies all 5 fields, calls unsubscribeWebhook, revalidates paths", async () => {
+    const { revalidatePath } = await import("next/cache");
+    const { unsubscribeWebhook } = await import("@/lib/facebook/client");
+
+    mockSupabase.auth.getUser.mockResolvedValue({
+      data: {
+        user: {
+          id: "user-id",
+          app_metadata: { tenant_id: "tenant-id" },
+        },
+      },
+      error: null,
+    });
+
+    const mockEq = vi.fn().mockResolvedValue({ error: null });
+    const mockUpdate = vi.fn().mockReturnValue({ eq: mockEq });
+
+    // First call: select (fetch business), Second call: update (clear fields)
+    let callCount = 0;
+    mockSupabase.from.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              single: vi.fn().mockResolvedValue({
+                data: {
+                  facebook_page_id: "page-123",
+                  facebook_access_token: "encrypted:test-token",
+                },
+                error: null,
+              }),
+            }),
+          }),
+        };
+      }
+      return { update: mockUpdate };
+    });
+
+    const result = await disconnectFacebookPage();
+
+    expect(result.success).toBe(true);
+    expect(unsubscribeWebhook).toHaveBeenCalledWith("page-123", "test-token");
+    expect(mockUpdate).toHaveBeenCalledWith({
+      facebook_page_id: null,
+      facebook_page_name: null,
+      facebook_page_avatar_url: null,
+      facebook_access_token: null,
+      facebook_connected_at: null,
+    });
+    expect(revalidatePath).toHaveBeenCalledWith("/settings/facebook");
+    expect(revalidatePath).toHaveBeenCalledWith("/settings");
+    expect(revalidatePath).toHaveBeenCalledWith("/dashboard");
+  });
+
+  it("still clears DB fields when unsubscribe fails (graceful degradation)", async () => {
+    const { unsubscribeWebhook } = await import("@/lib/facebook/client");
+    vi.mocked(unsubscribeWebhook).mockRejectedValue(new Error("Network error"));
+
+    mockSupabase.auth.getUser.mockResolvedValue({
+      data: {
+        user: {
+          id: "user-id",
+          app_metadata: { tenant_id: "tenant-id" },
+        },
+      },
+      error: null,
+    });
+
+    const mockEq = vi.fn().mockResolvedValue({ error: null });
+    const mockUpdate = vi.fn().mockReturnValue({ eq: mockEq });
+
+    let callCount = 0;
+    mockSupabase.from.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              single: vi.fn().mockResolvedValue({
+                data: {
+                  facebook_page_id: "page-123",
+                  facebook_access_token: "encrypted:test-token",
+                },
+                error: null,
+              }),
+            }),
+          }),
+        };
+      }
+      return { update: mockUpdate };
+    });
+
+    const result = await disconnectFacebookPage();
+
+    // Should still succeed even though unsubscribe failed
+    expect(result.success).toBe(true);
+    expect(mockUpdate).toHaveBeenCalledWith({
+      facebook_page_id: null,
+      facebook_page_name: null,
+      facebook_page_avatar_url: null,
+      facebook_access_token: null,
+      facebook_connected_at: null,
+    });
+  });
+
+  it("returns SERVER_ERROR when DB update fails", async () => {
+    mockSupabase.auth.getUser.mockResolvedValue({
+      data: {
+        user: {
+          id: "user-id",
+          app_metadata: { tenant_id: "tenant-id" },
+        },
+      },
+      error: null,
+    });
+
+    const mockEq = vi.fn().mockResolvedValue({ error: { message: "DB error" } });
+    const mockUpdate = vi.fn().mockReturnValue({ eq: mockEq });
+
+    let callCount = 0;
+    mockSupabase.from.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              single: vi.fn().mockResolvedValue({
+                data: {
+                  facebook_page_id: "page-123",
+                  facebook_access_token: "encrypted:test-token",
+                },
+                error: null,
+              }),
+            }),
+          }),
+        };
+      }
+      return { update: mockUpdate };
+    });
+
+    const result = await disconnectFacebookPage();
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("SERVER_ERROR");
+    }
+  });
 });

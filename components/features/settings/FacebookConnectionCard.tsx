@@ -30,16 +30,20 @@ export function FacebookConnectionCard({ status }: FacebookConnectionCardProps) 
   async function handleDisconnect() {
     setIsDisconnecting(true);
 
-    const result = await disconnectFacebookPage();
+    try {
+      const result = await disconnectFacebookPage();
 
-    if (result.success) {
-      toast.success("Facebook Page disconnected");
-      router.refresh();
-    } else {
-      toast.error(result.error.message);
+      if (result.success) {
+        toast.success("Facebook Page disconnected");
+        router.refresh();
+      } else {
+        toast.error(result.error.message);
+      }
+    } catch {
+      toast.error("Failed to disconnect. Please try again.");
+    } finally {
+      setIsDisconnecting(false);
     }
-
-    setIsDisconnecting(false);
   }
 
   if (!status.isConnected) {

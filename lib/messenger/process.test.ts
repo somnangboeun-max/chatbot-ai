@@ -288,6 +288,39 @@ describe("processIncomingMessage", () => {
     );
   });
 
+  it("should return early for disconnected page (no facebook_page_id match) and not send any response (Story 4.4 AC#3)", async () => {
+    // After disconnect, facebook_page_id is null in DB, so no business matches
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "businesses") {
+        return {
+          select: () => ({
+            eq: () => ({
+              single: () => Promise.resolve({ data: null, error: { code: "PGRST116" } }),
+            }),
+          }),
+        };
+      }
+      return {};
+    });
+
+    // Should NOT throw - returns gracefully
+    await processIncomingMessage(testMessage);
+
+    // Should log a warning, NOT an error
+    expect(console.warn).toHaveBeenCalledWith(
+      "[WARN] [WEBHOOK] No business found for page:",
+      { pageId: "PAGE_456" }
+    );
+    expect(console.error).not.toHaveBeenCalled();
+
+    // Should NOT attempt to create conversations or store messages
+    expect(mockFrom).toHaveBeenCalledTimes(1); // Only businesses table lookup
+    expect(mockFrom).toHaveBeenCalledWith("businesses");
+
+    // Should NOT trigger any automated response
+    expect(mockProcessAndRespond).not.toHaveBeenCalled();
+  });
+
   it("should throw error if conversation creation fails", async () => {
     mockFrom.mockImplementation((table: string) => {
       if (table === "businesses") {
