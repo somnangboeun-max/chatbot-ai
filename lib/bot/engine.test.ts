@@ -397,6 +397,76 @@ describe("processMessage", () => {
     });
   });
 
+  describe("mixed Khmer-English integration (Story 4.7)", () => {
+    it("should return product price for mixed message with product name", async () => {
+      (classifyIntent as Mock).mockReturnValue({
+        intent: "price_query",
+        confidence: "high",
+        extractedEntity: "lok lak",
+      });
+      (findProductByName as Mock).mockResolvedValue({
+        name: "Lok Lak",
+        price: 8.0,
+        currency: "USD",
+      });
+
+      const result = await processMessage(tenantId, "តម org លorg  lok lak ប org ន org មorg ន?");
+
+      expect(result.intent).toBe("price_query");
+      expect(result.confidence).toBe("high");
+      expect(result.matchedProduct).toBe("Lok Lak");
+    });
+
+    it("should return product list for 'delivery fee' query (not a product)", async () => {
+      (classifyIntent as Mock).mockReturnValue({
+        intent: "price_query",
+        confidence: "medium",
+      });
+      (getAllProducts as Mock).mockResolvedValue([
+        { name: "Coffee", price: 3.5, currency: "USD" },
+      ]);
+
+      const result = await processMessage(tenantId, "delivery fee ប org ន org មorg ន");
+
+      expect(result.intent).toBe("price_query");
+      expect(result.confidence).toBe("medium");
+      expect(getAllProducts).toHaveBeenCalledWith(tenantId);
+    });
+
+    it("should return hours for mixed 'ម org  open close' query", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date(2026, 0, 26, 10, 0)); // Monday 10:00 AM
+
+      (classifyIntent as Mock).mockReturnValue({
+        intent: "hours_query",
+        confidence: "high",
+      });
+      (getBusinessHours as Mock).mockResolvedValue({
+        monday: { open: "08:00", close: "17:00" },
+      });
+
+      const result = await processMessage(tenantId, "ម org  open close");
+
+      expect(result.intent).toBe("hours_query");
+      expect(result.confidence).toBe("high");
+      vi.useRealTimers();
+    });
+
+    it("should return location for mixed 'shop address org org org org ' query", async () => {
+      (classifyIntent as Mock).mockReturnValue({
+        intent: "location_query",
+        confidence: "high",
+      });
+      (getBusinessAddress as Mock).mockReturnValue("123 Street, Phnom Penh");
+
+      const result = await processMessage(tenantId, "shop address org org org org ");
+
+      expect(result.intent).toBe("location_query");
+      expect(result.confidence).toBe("high");
+      expect(getBusinessAddress).toHaveBeenCalledWith(tenantId);
+    });
+  });
+
   describe("error handling", () => {
     it("should return error template on engine error (Story 4.6)", async () => {
       (classifyIntent as Mock).mockImplementation(() => {

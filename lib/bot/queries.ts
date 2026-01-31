@@ -43,23 +43,23 @@ export async function findProductByName(
     return null;
   }
 
-  const normalizedQuery = query.toLowerCase().trim();
+  const normalizedQuery = normalizeWhitespace(query.toLowerCase().trim());
 
-  // 1. Exact match (case-insensitive)
+  // 1. Exact match (case-insensitive, whitespace-normalized)
   const exactMatch = products.find(
-    (p) => p.name.toLowerCase() === normalizedQuery
+    (p) => normalizeWhitespace(p.name.toLowerCase()) === normalizedQuery
   );
   if (exactMatch) return exactMatch;
 
-  // 2. Product name contains query
+  // 2. Product name contains query (whitespace-normalized)
   const containsMatch = products.find((p) =>
-    p.name.toLowerCase().includes(normalizedQuery)
+    normalizeWhitespace(p.name.toLowerCase()).includes(normalizedQuery)
   );
   if (containsMatch) return containsMatch;
 
-  // 3. Query contains product name
+  // 3. Query contains product name (whitespace-normalized)
   const reverseMatch = products.find((p) =>
-    normalizedQuery.includes(p.name.toLowerCase())
+    normalizedQuery.includes(normalizeWhitespace(p.name.toLowerCase()))
   );
   if (reverseMatch) return reverseMatch;
 
@@ -190,4 +190,12 @@ export async function getBusinessName(
   }
 
   return business?.name ?? null;
+}
+
+/**
+ * Collapse multiple whitespace to single space for normalized comparison.
+ * Handles mixed Khmer-English product names where extra spaces may appear.
+ */
+function normalizeWhitespace(str: string): string {
+  return str.replace(/\s+/g, " ").trim();
 }

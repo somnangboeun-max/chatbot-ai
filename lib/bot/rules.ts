@@ -19,14 +19,24 @@ const INTENT_KEYWORDS: Record<Exclude<Intent, "general_faq">, string[]> = {
     "តម្លៃ",
     "ប៉ុន្មាន",
     "ថ្លៃ",
+    "ការដឹកជញ្ជូន",
+    "បញ្ចុះតម្លៃ",
+    "ថែម",
     // English
     "price",
     "cost",
     "how much",
     "menu",
+    "delivery fee",
+    "discount",
+    "promotion",
+    "promo",
+    "sale",
   ],
   hours_query: [
-    // Khmer
+    // Khmer (compound phrases first for priority)
+    "ម៉ោងបើក",
+    "ម៉ោងបិទ",
     "ម៉ោង",
     "បើក",
     "បិទ",
@@ -36,28 +46,40 @@ const INTENT_KEYWORDS: Record<Exclude<Intent, "general_faq">, string[]> = {
     "open",
     "close",
     "when",
+    "schedule",
+    "available",
   ],
   location_query: [
     // Khmer
     "ទីតាំង",
     "នៅឯណា",
     "អាសយដ្ឋាន",
+    "ហាង",
+    "ជិត",
+    "ផ្លូវ",
     // English
     "location",
     "address",
     "where",
     "directions",
     "find you",
+    "shop",
+    "store",
+    "map",
   ],
   phone_query: [
     // Khmer
     "ទូរស័ព្ទ",
     "លេខ",
     "ទំនាក់ទំនង",
+    "ទំនាក់",
     // English
     "phone",
     "call",
     "contact",
+    "telegram",
+    "line", // Broad — may false-positive; kept for LINE app common in Cambodia
+    "message",
   ],
   greeting: [
     // Khmer
@@ -84,6 +106,19 @@ const INTENT_KEYWORDS: Record<Exclude<Intent, "general_faq">, string[]> = {
 };
 
 /**
+ * Commerce synonym mapping for secondary intent matching.
+ * These catch common English words used in Cambodian commerce
+ * that don't appear in the primary keyword lists.
+ * Only activated when no primary keyword match is found.
+ */
+const COMMERCE_SYNONYMS: Record<string, Exclude<Intent, "general_faq">> = {
+  delivery: "price_query",
+  deliver: "price_query",
+  wifi: "location_query",
+  parking: "location_query",
+};
+
+/**
  * Priority order for intent matching.
  * Price queries are checked first since they're the most common
  * and may also contain location/hours keywords in context.
@@ -98,6 +133,31 @@ const INTENT_PRIORITY: Exclude<Intent, "general_faq">[] = [
 ];
 
 /**
+ * Normalize a message for reliable keyword matching.
+ * - Lowercases Latin characters only (Khmer has no case)
+ * - Strips zero-width characters common in Khmer text
+ * - Normalizes unicode whitespace
+ * - Collapses multiple spaces
+ */
+export function normalizeMessage(message: string): string {
+  let result = message;
+
+  // Remove zero-width characters (U+200B, U+200C, U+200D, U+FEFF)
+  result = result.replace(/[\u200B\u200C\u200D\uFEFF]/g, "");
+
+  // Replace non-breaking space (U+00A0) with regular space
+  result = result.replace(/\u00A0/g, " ");
+
+  // Lowercase Latin characters only (Khmer has no case)
+  result = result.replace(/[A-Z]/g, (ch) => ch.toLowerCase());
+
+  // Collapse multiple whitespace to single space and trim
+  result = result.replace(/\s+/g, " ").trim();
+
+  return result;
+}
+
+/**
  * Classify a customer message into an intent with confidence.
  *
  * Matching rules:
@@ -107,7 +167,7 @@ const INTENT_PRIORITY: Exclude<Intent, "general_faq">[] = [
  * 4. No match → general_faq with low confidence
  */
 export function classifyIntent(message: string): MatchResult {
-  const normalizedMessage = message.toLowerCase().trim();
+  const normalizedMessage = normalizeMessage(message);
 
   for (const intent of INTENT_PRIORITY) {
     const keywords = INTENT_KEYWORDS[intent];
@@ -133,6 +193,20 @@ export function classifyIntent(message: string): MatchResult {
     }
   }
 
+  // Secondary pass: check commerce synonyms
+  const words = normalizedMessage.split(/\s+/);
+  for (const word of words) {
+    // Strip punctuation for synonym lookup
+    const cleanWord = word.replace(/[?។!.,;:]/g, "");
+    const synonymIntent = COMMERCE_SYNONYMS[cleanWord];
+    if (synonymIntent) {
+      return {
+        intent: synonymIntent,
+        confidence: "medium",
+      };
+    }
+  }
+
   // No intent matched
   return {
     intent: "general_faq",
@@ -148,10 +222,11 @@ export function classifyIntent(message: string): MatchResult {
  * Example: "how much is coffee" → "coffee"
  */
 export function extractProductName(
-  normalizedMessage: string,
+  message: string,
   priceKeywords: string[]
 ): string | undefined {
-  let remaining = normalizedMessage;
+  // normalizeMessage is idempotent — safe even when caller pre-normalized
+  let remaining = normalizeMessage(message);
 
   // Remove all known price keywords
   for (const keyword of priceKeywords) {
@@ -162,6 +237,12 @@ export function extractProductName(
   const fillerWords = ["is", "the", "of", "for", "a", "an"];
   for (const filler of fillerWords) {
     remaining = remaining.replace(new RegExp(`\\b${escapeRegExp(filler)}\\b`, "gi"), "");
+  }
+
+  // Remove Khmer filler words (no word boundaries — Khmer has none)
+  const khmerFillers = ["បង", "អី", "នេះ", "នោះ", "មួយ"];
+  for (const filler of khmerFillers) {
+    remaining = remaining.split(filler).join("");
   }
 
   // Remove punctuation directly (no word boundary needed for non-word chars)
