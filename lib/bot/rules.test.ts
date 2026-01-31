@@ -148,7 +148,7 @@ describe("classifyIntent", () => {
 
   describe("general_faq (no match)", () => {
     it("should return general_faq with low confidence for unknown message", () => {
-      const result = classifyIntent("Hello, I have a question");
+      const result = classifyIntent("Can you do delivery?");
       expect(result.intent).toBe("general_faq");
       expect(result.confidence).toBe("low");
     });
@@ -163,6 +163,52 @@ describe("classifyIntent", () => {
       const result = classifyIntent("I love your food!");
       expect(result.intent).toBe("general_faq");
       expect(result.confidence).toBe("low");
+    });
+  });
+
+  describe("greeting (Story 4.6)", () => {
+    it("should classify Khmer 'សួស្តី' as greeting", () => {
+      const result = classifyIntent("សួស្តី");
+      expect(result.intent).toBe("greeting");
+      expect(result.confidence).toBe("high");
+    });
+
+    it("should classify English 'hello' as greeting", () => {
+      const result = classifyIntent("Hello there");
+      expect(result.intent).toBe("greeting");
+    });
+
+    it("should classify 'good morning' as greeting", () => {
+      const result = classifyIntent("good morning");
+      expect(result.intent).toBe("greeting");
+    });
+
+    it("should classify Khmer 'ជំរាបសួរ' as greeting", () => {
+      const result = classifyIntent("ជំរាបសួរ");
+      expect(result.intent).toBe("greeting");
+    });
+  });
+
+  describe("farewell (Story 4.6)", () => {
+    it("should classify Khmer 'ជំរាបលា' as farewell", () => {
+      const result = classifyIntent("ជំរាបលា");
+      expect(result.intent).toBe("farewell");
+      expect(result.confidence).toBe("high");
+    });
+
+    it("should classify English 'goodbye' as farewell", () => {
+      const result = classifyIntent("goodbye");
+      expect(result.intent).toBe("farewell");
+    });
+
+    it("should classify 'thank you' as farewell", () => {
+      const result = classifyIntent("thank you");
+      expect(result.intent).toBe("farewell");
+    });
+
+    it("should classify Khmer 'អរគុណ' as farewell", () => {
+      const result = classifyIntent("អរគុណ");
+      expect(result.intent).toBe("farewell");
     });
   });
 

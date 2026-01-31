@@ -16,6 +16,8 @@ export type Intent =
   | "hours_query"
   | "location_query"
   | "phone_query"
+  | "greeting"
+  | "farewell"
   | "general_faq";
 
 /**

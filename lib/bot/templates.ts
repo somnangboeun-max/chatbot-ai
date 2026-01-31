@@ -71,7 +71,7 @@ export function formatProductNotFoundResponse(
   const productLines = availableProducts
     .map((p) => `• ${p.name} - ${formatCurrency(p.price, p.currency)}`)
     .join("\n");
-  return `អភ័យទោស យើងរកមិនឃើញ "${query}"។ នេះគឺជាផលិតផលដែលមាន:\n${productLines}`;
+  return `អភ័យទោស យើងរកមិនឃើញ "${query}"។ នេះគឺជាផលិតផលដែលមាន:\n${productLines}\nសូមសាកសួរអំពីផលិតផលណាមួយខាងលើ!`;
 }
 
 /**
@@ -157,6 +157,92 @@ export function formatNoDataResponse(
     case "phone":
       return "អភ័យទោស យើងមិនមានព័ត៌មានទំនាក់ទំនងនៅពេលនេះទេ។ សូមទាក់ទងមកយើងដោយផ្ទាល់។";
   }
+}
+
+// ── Greeting Templates (Story 4.6) ───────────────────────────────
+
+/**
+ * Greeting response variants for natural variety.
+ * Returns contextually appropriate greeting based on available info.
+ */
+const GREETING_VARIANTS = [
+  /** Formal greeting with business name.
+   * Translation: "Hello! Welcome to {businessName}. How can we help you today?" */
+  (businessName: string) =>
+    `សួស្តី! សូមស្វាគមន៍មក ${businessName}។ តើយើងអាចជួយអ្នកដោយរបៀបណា?`,
+
+  /** Time-aware greeting (morning/afternoon/evening).
+   * Translation: "Good {timeOfDay}! Welcome. Please feel free to ask any question." */
+  () => {
+    const hour = new Date().getHours();
+    const timeGreeting =
+      hour < 12
+        ? "អរុណសួស្តី"
+        : hour < 18
+          ? "ទិវាសួស្តី"
+          : "សាយ័ណ្ហសួស្តី";
+    return `${timeGreeting}! សូមស្វាគមន៍។ សូមសាកសួរអ្វីដែលអ្នកចង់ដឹង។`;
+  },
+
+  /** Generic welcoming greeting.
+   * Translation: "Hello! Thank you for contacting us. How can we assist you?" */
+  () =>
+    "សួស្តី! សូមអរគុណដែលបានទាក់ទងមកយើង។ តើយើងអាចជួយអ្វីបានខ្លះ?",
+] as const;
+
+/**
+ * Get a contextually appropriate greeting response.
+ * Uses business name if provided, otherwise rotates variants.
+ *
+ * @param businessName - Optional business name for personalized greeting
+ */
+export function getGreetingResponse(businessName?: string): string {
+  if (businessName) {
+    return GREETING_VARIANTS[0](businessName);
+  }
+  // Alternate between time-aware and generic greetings
+  const variantIndex = new Date().getMinutes() % 2 === 0 ? 1 : 2;
+  return GREETING_VARIANTS[variantIndex]();
+}
+
+// ── Farewell Templates (Story 4.6) ──────────────────────────────
+
+/**
+ * Standard farewell with thanks.
+ * Translation: "Thank you for contacting us! If you have more questions, please feel free to ask anytime. Have a wonderful day!"
+ */
+export function getFarewellResponse(): string {
+  const variants = [
+    "សូមអរគុណសម្រាប់ការទាក់ទង! ប្រសិនបើអ្នកមានសំណួរបន្ថែម សូមសាកសួរបានគ្រប់ពេល។ សូមឱ្យមានថ្ងៃល្អ!",
+    "សូមអរគុណ! យើងរីករាយដែលបានជួយអ្នក។ សូមកុំស្ទាក់ស្ទើរក្នុងការទាក់ទងមកយើងម្ដងទៀត។",
+  ];
+  return variants[new Date().getMinutes() % 2]!;
+}
+
+// ── Business Closed Template (Story 4.6) ─────────────────────────
+
+/**
+ * Response when business is currently closed, showing next opening time.
+ * Translation: "Sorry, we are currently closed. We will open again on {nextOpenDay} at {nextOpenTime}. Thank you for your patience!"
+ *
+ * @param nextOpenTime - Next opening time (e.g., "08:00")
+ * @param nextOpenDay - Next opening day in Khmer (e.g., "ច័ន្ទ")
+ */
+export function getClosedNowResponse(
+  nextOpenTime: string,
+  nextOpenDay: string
+): string {
+  return `អភ័យទោស យើងបានបិទហើយនៅពេលនេះ។ យើងនឹងបើកវិញនៅថ្ងៃ${nextOpenDay} ម៉ោង ${nextOpenTime}។ សូមអរគុណសម្រាប់ការអត់ធ្មត់!`;
+}
+
+// ── Error/Fallback Templates (Story 4.6) ─────────────────────────
+
+/**
+ * Response for temporary technical errors with retry suggestion.
+ * Translation: "Sorry, a temporary error occurred. Please try sending your message again. If the problem persists, please contact us directly."
+ */
+export function getErrorResponse(): string {
+  return "អភ័យទោស មានបញ្ហាបច្ចេកទេសបណ្ដោះអាសន្ន។ សូមសាកល្បងផ្ញើសារម្ដងទៀត។ ប្រសិនបើបញ្ហានៅតែបន្ត សូមទាក់ទងមកយើងដោយផ្ទាល់។";
 }
 
 // ── Helpers ──────────────────────────────────────────────────────

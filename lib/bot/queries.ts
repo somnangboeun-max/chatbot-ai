@@ -166,3 +166,28 @@ export async function getBusinessPhone(
 
   return business?.phone ?? null;
 }
+
+/**
+ * Get business name for personalized responses.
+ */
+export async function getBusinessName(
+  tenantId: string
+): Promise<string | null> {
+  const supabase = createAdminClient();
+
+  const { data: business, error } = await supabase
+    .from("businesses")
+    .select("name")
+    .eq("id", tenantId)
+    .single();
+
+  if (error) {
+    console.error("[ERROR] [BOT] Business name query failed:", {
+      tenantId,
+      error: error.message,
+    });
+    return null;
+  }
+
+  return business?.name ?? null;
+}

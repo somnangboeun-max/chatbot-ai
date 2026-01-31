@@ -18,6 +18,7 @@ import {
   getBusinessHours,
   getBusinessAddress,
   getBusinessPhone,
+  getBusinessName,
 } from "./queries";
 import {
   formatPriceResponse,
@@ -28,6 +29,10 @@ import {
   formatNoMatchResponse,
   formatProductNotFoundResponse,
   formatNoDataResponse,
+  getGreetingResponse,
+  getFarewellResponse,
+  getClosedNowResponse,
+  getErrorResponse,
 } from "./templates";
 
 /**
@@ -61,6 +66,22 @@ export async function processMessage(
       case "phone_query":
         return await handlePhoneQuery(tenantId);
 
+      case "greeting": {
+        const businessName = await getBusinessName(tenantId);
+        return {
+          responseText: getGreetingResponse(businessName ?? undefined),
+          confidence: "high",
+          intent: "greeting",
+        };
+      }
+
+      case "farewell":
+        return {
+          responseText: getFarewellResponse(),
+          confidence: "high",
+          intent: "farewell",
+        };
+
       case "general_faq":
       default:
         return {
@@ -76,7 +97,7 @@ export async function processMessage(
     });
 
     return {
-      responseText: formatNoMatchResponse(),
+      responseText: getErrorResponse(),
       confidence: "low",
       intent: "general_faq",
     };
@@ -132,6 +153,80 @@ async function handlePriceQuery(
   };
 }
 
+/** Khmer day names for closed-now template */
+const KHMER_DAY_NAMES: Record<string, string> = {
+  monday: "ច័ន្ទ",
+  tuesday: "អង្គារ",
+  wednesday: "ពុធ",
+  thursday: "ព្រហស្បតិ៍",
+  friday: "សុក្រ",
+  saturday: "សៅរ៍",
+  sunday: "អាទិត្យ",
+};
+
+const DAY_ORDER = [
+  "sunday",
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+];
+
+/**
+ * Check if business is currently open based on hours schedule.
+ * Returns next opening info if closed.
+ */
+function getClosedInfo(
+  hours: Record<string, { open: string; close: string }>
+): { isClosed: boolean; nextOpenTime?: string; nextOpenDay?: string } {
+  const now = new Date();
+  const currentDay = DAY_ORDER[now.getDay()]!;
+  const currentTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+
+  // Check if currently open (today's schedule)
+  const todaySchedule = hours[currentDay];
+  if (todaySchedule) {
+    if (todaySchedule.close < todaySchedule.open) {
+      // Cross-midnight schedule (e.g., 18:00-02:00): open if past opening time today
+      if (currentTime >= todaySchedule.open) {
+        return { isClosed: false };
+      }
+    } else if (currentTime >= todaySchedule.open && currentTime < todaySchedule.close) {
+      return { isClosed: false };
+    }
+  }
+
+  // Check if in yesterday's cross-midnight window (e.g., 01:00 and yesterday opened 18:00-02:00)
+  const yesterdayIndex = (now.getDay() + 6) % 7;
+  const yesterdayDay = DAY_ORDER[yesterdayIndex]!;
+  const yesterdaySchedule = hours[yesterdayDay];
+  if (yesterdaySchedule && yesterdaySchedule.close < yesterdaySchedule.open && currentTime < yesterdaySchedule.close) {
+    return { isClosed: false };
+  }
+
+  // Business is closed — find next opening
+  const dayIndex = now.getDay();
+  for (let offset = 0; offset <= 7; offset++) {
+    const checkDayIndex = (dayIndex + offset) % 7;
+    const checkDay = DAY_ORDER[checkDayIndex]!;
+    const schedule = hours[checkDay];
+
+    if (schedule) {
+      if (offset > 0 || currentTime < schedule.open) {
+        return {
+          isClosed: true,
+          nextOpenTime: schedule.open,
+          nextOpenDay: KHMER_DAY_NAMES[checkDay] ?? checkDay,
+        };
+      }
+    }
+  }
+
+  return { isClosed: true };
+}
+
 async function handleHoursQuery(tenantId: string): Promise<BotResponse> {
   const hours = await getBusinessHours(tenantId);
   if (!hours) {
@@ -141,6 +236,16 @@ async function handleHoursQuery(tenantId: string): Promise<BotResponse> {
       intent: "hours_query",
     };
   }
+
+  const closedInfo = getClosedInfo(hours);
+  if (closedInfo.isClosed && closedInfo.nextOpenTime && closedInfo.nextOpenDay) {
+    return {
+      responseText: getClosedNowResponse(closedInfo.nextOpenTime, closedInfo.nextOpenDay),
+      confidence: "high",
+      intent: "hours_query",
+    };
+  }
+
   return {
     responseText: formatHoursResponse(hours),
     confidence: "high",

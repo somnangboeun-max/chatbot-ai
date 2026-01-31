@@ -59,6 +59,28 @@ const INTENT_KEYWORDS: Record<Exclude<Intent, "general_faq">, string[]> = {
     "call",
     "contact",
   ],
+  greeting: [
+    // Khmer
+    "សួស្តី",
+    "ជំរាបសួរ",
+    "អរុណសួស្តី",
+    // English (avoid short substrings that match inside other words)
+    "hello",
+    "good morning",
+    "good afternoon",
+    "good evening",
+  ],
+  farewell: [
+    // Khmer
+    "លាហើយ",
+    "ជំរាបលា",
+    "អរគុណ",
+    // English
+    "bye",
+    "goodbye",
+    "thank you",
+    "thanks",
+  ],
 };
 
 /**
@@ -71,6 +93,8 @@ const INTENT_PRIORITY: Exclude<Intent, "general_faq">[] = [
   "hours_query",
   "location_query",
   "phone_query",
+  "greeting",
+  "farewell",
 ];
 
 /**
