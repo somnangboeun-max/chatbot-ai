@@ -398,6 +398,176 @@ describe("classifyIntent", () => {
     });
   });
 
+  describe("expanded greeting keywords (Story 4.8 Task 1)", () => {
+    it("should classify 'hi' as greeting via synonym", () => {
+      const result = classifyIntent("hi");
+      expect(result.intent).toBe("greeting");
+    });
+
+    it("should classify 'hey' as greeting via synonym", () => {
+      const result = classifyIntent("hey");
+      expect(result.intent).toBe("greeting");
+    });
+
+    it("should classify 'hi បង' as greeting", () => {
+      const result = classifyIntent("hi បង");
+      expect(result.intent).toBe("greeting");
+    });
+
+    it("should classify 'សុខសប្បាយ' as greeting", () => {
+      const result = classifyIntent("សុខសប្បាយ");
+      expect(result.intent).toBe("greeting");
+    });
+
+    it("should classify 'ឡូ' as greeting", () => {
+      const result = classifyIntent("ឡូ");
+      expect(result.intent).toBe("greeting");
+    });
+
+    it("should classify 'halo' as greeting", () => {
+      const result = classifyIntent("halo");
+      expect(result.intent).toBe("greeting");
+    });
+
+    it("should classify 'hello បង' as greeting", () => {
+      const result = classifyIntent("hello បង");
+      expect(result.intent).toBe("greeting");
+    });
+  });
+
+  describe("expanded farewell keywords (Story 4.8 Task 2)", () => {
+    it("should classify 'អរគុណច្រើន' as farewell", () => {
+      const result = classifyIntent("អរគុណច្រើន");
+      expect(result.intent).toBe("farewell");
+    });
+
+    it("should classify 'ok' as farewell via synonym (standalone)", () => {
+      const result = classifyIntent("ok");
+      expect(result.intent).toBe("farewell");
+    });
+
+    it("should classify 'okay' as farewell via synonym", () => {
+      const result = classifyIntent("okay");
+      expect(result.intent).toBe("farewell");
+      expect(result.confidence).toBe("medium");
+    });
+
+    it("should classify 'ចាស' as farewell", () => {
+      const result = classifyIntent("ចាស");
+      expect(result.intent).toBe("farewell");
+    });
+
+    it("should classify 'បាទ' as farewell", () => {
+      const result = classifyIntent("បាទ");
+      expect(result.intent).toBe("farewell");
+    });
+
+    it("should classify 'ok thanks' as farewell", () => {
+      const result = classifyIntent("ok thanks");
+      expect(result.intent).toBe("farewell");
+    });
+
+    it("should classify 'អរគុណណា' as farewell", () => {
+      const result = classifyIntent("អរគុណណា");
+      expect(result.intent).toBe("farewell");
+    });
+
+    it("should classify 'អរគុណហើយ' as farewell", () => {
+      const result = classifyIntent("អរគុណហើយ");
+      expect(result.intent).toBe("farewell");
+    });
+
+    it("should classify 'ល្អ' as farewell", () => {
+      const result = classifyIntent("ល្អ");
+      expect(result.intent).toBe("farewell");
+    });
+
+    it("should classify 'thank' as farewell", () => {
+      const result = classifyIntent("thank");
+      expect(result.intent).toBe("farewell");
+    });
+  });
+
+  describe("greeting/farewell priority and false-positive prevention (Story 4.8)", () => {
+    it("should classify 'សួស្តី តម្លៃប៉ុន្មាន?' as price_query (NOT greeting)", () => {
+      const result = classifyIntent("សួស្តី តម្លៃប៉ុន្មាន?");
+      expect(result.intent).toBe("price_query");
+    });
+
+    it("should classify 'hi តម្លៃ lok lak' as price_query (NOT greeting)", () => {
+      const result = classifyIntent("hi តម្លៃ lok lak");
+      expect(result.intent).toBe("price_query");
+    });
+
+    it("should classify 'ok' with hours keyword as hours_query (NOT farewell)", () => {
+      // hours keyword has higher priority than farewell
+      const result = classifyIntent("ok \u1798\u17C9\u17C4\u1784\u1794\u17BE\u1780\u1798\u17C9\u17C4\u1784\u1794\u17B7\u1791");
+      expect(result.intent).toBe("hours_query");
+    });
+
+    it("should classify message with both farewell keywords as farewell", () => {
+      const result = classifyIntent("\u17A2\u179A\u1782\u17BB\u178E bye");
+      expect(result.intent).toBe("farewell");
+    });
+
+    it("should still classify pure Khmer greeting as greeting (regression)", () => {
+      const result = classifyIntent("\u179F\u17BD\u179F\u17D2\u178F\u17B8");
+      expect(result.intent).toBe("greeting");
+    });
+
+    it("should still classify pure Khmer farewell as farewell (regression)", () => {
+      const result = classifyIntent("\u17A2\u179A\u1782\u17BB\u178E");
+      expect(result.intent).toBe("farewell");
+    });
+
+    it("should NOT false-positive 'booking' as farewell (ok is word-level only)", () => {
+      const result = classifyIntent("Can I make a booking?");
+      expect(result.intent).toBe("general_faq");
+    });
+
+    it("should NOT false-positive 'this' as greeting (hi is word-level only)", () => {
+      const result = classifyIntent("Can I get this?");
+      expect(result.intent).toBe("general_faq");
+    });
+
+    it("should NOT false-positive 'okayed' as farewell (okay is word-level only)", () => {
+      const result = classifyIntent("The request was okayed");
+      expect(result.intent).toBe("general_faq");
+    });
+  });
+
+  describe("greeting/farewell commerce synonyms (Story 4.8 Task 3)", () => {
+    it("should classify 'sup' as greeting via synonym", () => {
+      const result = classifyIntent("sup");
+      expect(result.intent).toBe("greeting");
+    });
+
+    it("should classify 'yo' as greeting via synonym", () => {
+      const result = classifyIntent("yo");
+      expect(result.intent).toBe("greeting");
+    });
+
+    it("should classify 'howdy' as greeting via synonym", () => {
+      const result = classifyIntent("howdy");
+      expect(result.intent).toBe("greeting");
+    });
+
+    it("should classify 'thx' as farewell via synonym", () => {
+      const result = classifyIntent("thx");
+      expect(result.intent).toBe("farewell");
+    });
+
+    it("should classify 'ty' as farewell via synonym", () => {
+      const result = classifyIntent("ty");
+      expect(result.intent).toBe("farewell");
+    });
+
+    it("should classify 'cheers' as farewell via synonym", () => {
+      const result = classifyIntent("cheers");
+      expect(result.intent).toBe("farewell");
+    });
+  });
+
   describe("Story 4.7 comprehensive mixed-language scenarios (Task 5.1)", () => {
     it("should classify mixed 'តម org លorg delivery fee ប org ន org មorg ន?' as price_query", () => {
       const result = classifyIntent("តម org លorg  delivery fee ប org ន org មorg ន?");

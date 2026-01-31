@@ -191,18 +191,30 @@ const GREETING_VARIANTS = [
 ] as const;
 
 /**
+ * Help prompt appended to greeting responses.
+ * Lists what the bot can answer — max 4 bullet items.
+ * Translation: "Would you like to ask about:\n• Product prices\n• Business hours\n• Location\n• Contact number"
+ */
+const GREETING_HELP_PROMPT =
+  "\n\nតើអ្នកចង់សាកសួរអំពី:\n• តម្លៃផលិតផល\n• ម៉ោងធ្វើការ\n• ទីតាំង\n• លេខទំនាក់ទំនង";
+
+/**
  * Get a contextually appropriate greeting response.
  * Uses business name if provided, otherwise rotates variants.
+ * Appends a help prompt so customers know what the bot can answer.
  *
  * @param businessName - Optional business name for personalized greeting
  */
 export function getGreetingResponse(businessName?: string): string {
+  let greeting: string;
   if (businessName) {
-    return GREETING_VARIANTS[0](businessName);
+    greeting = GREETING_VARIANTS[0](businessName);
+  } else {
+    // Alternate between time-aware and generic greetings
+    const variantIndex = new Date().getMinutes() % 2 === 0 ? 1 : 2;
+    greeting = GREETING_VARIANTS[variantIndex]();
   }
-  // Alternate between time-aware and generic greetings
-  const variantIndex = new Date().getMinutes() % 2 === 0 ? 1 : 2;
-  return GREETING_VARIANTS[variantIndex]();
+  return greeting + GREETING_HELP_PROMPT;
 }
 
 // ── Farewell Templates (Story 4.6) ──────────────────────────────

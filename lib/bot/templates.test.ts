@@ -3,7 +3,7 @@
  * Story 4.6: Khmer Language Response Templates
  */
 
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   getDefaultResponse,
   getHandoverResponse,
@@ -208,6 +208,58 @@ describe("getGreetingResponse", () => {
     expectKhmerContent(result);
     expect(result).toContain("សូមអរគុណ"); // Thank you for contacting
     vi.useRealTimers();
+  });
+});
+
+// ── Greeting Help Prompt (Story 4.8) ────────────────────────────
+
+describe("getGreetingResponse help prompt (Story 4.8)", () => {
+  beforeEach(() => {
+    // Use fake timers for deterministic variant selection
+    // (greeting variant depends on new Date().getMinutes() % 2)
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 0, 31, 10, 0));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it("includes help prompt text in greeting without business name", () => {
+    const result = getGreetingResponse();
+    expect(result).toContain("\u178F\u17BE\u17A2\u17D2\u1793\u1780\u1785\u1784\u17CB\u179F\u17B6\u1780\u179F\u17BD\u179A\u17A2\u17C6\u1796\u17B8");
+  });
+
+  it("includes help prompt text in greeting with business name", () => {
+    const result = getGreetingResponse("Test Shop");
+    expect(result).toContain("\u178F\u17BE\u17A2\u17D2\u1793\u1780\u1785\u1784\u17CB\u179F\u17B6\u1780\u179F\u17BD\u179A\u17A2\u17C6\u1796\u17B8");
+  });
+
+  it("includes product prices in help prompt", () => {
+    const result = getGreetingResponse();
+    expect(result).toContain("\u178F\u1798\u17D2\u179B\u17C3\u1795\u179B\u17B7\u178F\u1795\u179B");
+  });
+
+  it("includes business hours in help prompt", () => {
+    const result = getGreetingResponse();
+    expect(result).toContain("\u1798\u17C9\u17C4\u1784\u1792\u17D2\u179C\u17BE\u1780\u17B6\u179A");
+  });
+
+  it("includes location in help prompt", () => {
+    const result = getGreetingResponse();
+    expect(result).toContain("\u1791\u17B8\u178F\u17B6\u17C6\u1784");
+  });
+
+  it("includes contact number in help prompt", () => {
+    const result = getGreetingResponse();
+    expect(result).toContain("\u179B\u17C1\u1781\u1791\u17C6\u1793\u17B6\u1780\u17CB\u1791\u17C6\u1793\u1784");
+  });
+
+  it("getFarewellResponse does NOT include help prompt", () => {
+    const result = getFarewellResponse();
+    // Help prompt starts with "តorg org org org org org org org org org org org org org org org org org org org org org :"
+    expect(result).not.toContain("\u178F\u17BE\u17A2\u17D2\u1793\u1780\u1785\u1784\u17CB\u179F\u17B6\u1780\u179F\u17BD\u179A\u17A2\u17C6\u1796\u17B8");
   });
 });
 

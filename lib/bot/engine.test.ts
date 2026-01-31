@@ -467,6 +467,64 @@ describe("processMessage", () => {
     });
   });
 
+  // Note: These tests mock classifyIntent to return predetermined results. They verify
+  // the engine responds correctly for each intent, but do not test the real classification
+  // pipeline. See rules.test.ts for actual keyword classification tests.
+  describe("expanded greeting/farewell (Story 4.8)", () => {
+    it("should return greeting response for 'hi' message", async () => {
+      (classifyIntent as Mock).mockReturnValue({
+        intent: "greeting",
+        confidence: "high",
+      });
+      (getBusinessName as Mock).mockResolvedValue("Test Shop");
+
+      const result = await processMessage(tenantId, "hi");
+
+      expect(result.intent).toBe("greeting");
+      expect(result.confidence).toBe("high");
+      expect(result.responseText).toBe("Greeting response");
+    });
+
+    it("should return greeting response for 'hi \u1794\u1784' message", async () => {
+      (classifyIntent as Mock).mockReturnValue({
+        intent: "greeting",
+        confidence: "high",
+      });
+      (getBusinessName as Mock).mockResolvedValue("Test Shop");
+
+      const result = await processMessage(tenantId, "hi \u1794\u1784");
+
+      expect(result.intent).toBe("greeting");
+      expect(result.confidence).toBe("high");
+    });
+
+    it("should return farewell response for 'ok thanks' message", async () => {
+      (classifyIntent as Mock).mockReturnValue({
+        intent: "farewell",
+        confidence: "high",
+      });
+
+      const result = await processMessage(tenantId, "ok thanks");
+
+      expect(result.intent).toBe("farewell");
+      expect(result.confidence).toBe("high");
+      expect(result.responseText).toBe("Farewell response");
+    });
+
+    it("should return greeting response with help menu mock", async () => {
+      (classifyIntent as Mock).mockReturnValue({
+        intent: "greeting",
+        confidence: "high",
+      });
+      (getBusinessName as Mock).mockResolvedValue(null);
+
+      const result = await processMessage(tenantId, "halo");
+
+      expect(result.intent).toBe("greeting");
+      expect(result.responseText).toBe("Greeting response");
+    });
+  });
+
   describe("error handling", () => {
     it("should return error template on engine error (Story 4.6)", async () => {
       (classifyIntent as Mock).mockImplementation(() => {

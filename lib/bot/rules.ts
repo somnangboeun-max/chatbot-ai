@@ -86,22 +86,45 @@ const INTENT_KEYWORDS: Record<Exclude<Intent, "general_faq">, string[]> = {
     "សួស្តី",
     "ជំរាបសួរ",
     "អរុណសួស្តី",
+    "សុខសប្បាយ",
+    "ឡូ",
+    "បង",
+    // Mixed Khmer-English patterns
+    "hi បង",
+    "hello បង",
     // English (avoid short substrings that match inside other words)
     "hello",
     "good morning",
     "good afternoon",
     "good evening",
+    "halo",
+    // Note: "hi" and "hey" are in COMMERCE_SYNONYMS (word-level match) to prevent
+    // false positives on words containing "hi" (e.g., "this", "which").
+    // Design note: Khmer honorific "bong" above is broad (used as general address
+    // term) but safe due to INTENT_PRIORITY — higher-priority intents always win.
   ],
   farewell: [
     // Khmer
     "លាហើយ",
     "ជំរាបលា",
+    "អរគុណច្រើន",
+    "អរគុណណា",
+    "អរគុណហើយ",
     "អរគុណ",
+    "ល្អ",
+    "ចាស",
+    "បាទ",
+    // Mixed patterns
+    "ok thanks",
     // English
     "bye",
     "goodbye",
     "thank you",
     "thanks",
+    "thank",
+    // Note: "ok" and "okay" are in COMMERCE_SYNONYMS (word-level match) rather than
+    // here (substring match) to prevent false positives on words containing "ok"
+    // (e.g., "booking" contains "ok"). Commerce synonyms split on whitespace first.
   ],
 };
 
@@ -116,6 +139,20 @@ const COMMERCE_SYNONYMS: Record<string, Exclude<Intent, "general_faq">> = {
   deliver: "price_query",
   wifi: "location_query",
   parking: "location_query",
+  hi: "greeting",
+  hey: "greeting",
+  sup: "greeting",
+  yo: "greeting",
+  howdy: "greeting",
+  thx: "farewell",
+  ty: "farewell",
+  cheers: "farewell",
+  // "ok" and "okay" use word-level synonym matching (not substring) to prevent false
+  // positives on words containing "ok" (e.g., "booking"). As farewell, "ok"/"okay"
+  // alone are almost always conversation closers; combined with INTENT_PRIORITY,
+  // higher-priority intents still win when they appear alongside other keywords.
+  ok: "farewell",
+  okay: "farewell",
 };
 
 /**
